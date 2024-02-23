@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Vale VoIP"
 include(":app")
+include(":telecom")
