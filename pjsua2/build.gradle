@@ -1,14 +1,14 @@
 plugins {
     id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
+    namespace 'org.pjsip.pjsua2'
     compileSdk 34
-
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 34
-
 
         ndk {
             moduleName "libpjsua2"
@@ -34,7 +34,11 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    namespace 'org.pjsip.pjsua2'
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
 
     sourceSets {
         main {
