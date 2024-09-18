@@ -42,4 +42,9 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
+
+    /*// Linphone SDK
+    debugImplementation(libs.linphone.android.debug)
+    releaseImplementation(libs.linphone.android.release)
+    implementation(libs.media)*/
 }
