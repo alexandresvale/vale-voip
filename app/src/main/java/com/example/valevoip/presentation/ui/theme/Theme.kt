@@ -1,4 +1,4 @@
-package com.example.valevoip.ui.theme
+package com.example.valevoip.presentation.ui.theme
 
 import android.app.Activity
 import android.os.Build
