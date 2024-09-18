@@ -22,7 +22,7 @@ android {
             useSupportLibrary = true
         }
 
-        /*ndk {
+        ndk {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
         }
 
@@ -30,7 +30,7 @@ android {
             cmake {
                 arguments += "-DANDROID_STL=c++_static"
             }
-        }*/
+        }
 
     }
 
@@ -88,7 +88,7 @@ android {
 
 dependencies {
     implementation(project(":telecom"))
-    implementation(project(":pjsua2"))
+//    implementation(project(":pjsua2"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
