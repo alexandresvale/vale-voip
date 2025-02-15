@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.ValeVoIP.MySplash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#6650a4</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenBackground">@color/primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_vale_voip_round</item>
+        <item name="splashScreenIconSize">@dimen/splashscreen_icon_size</item>
         <item name="postSplashScreenTheme">@style/Theme.ValeVoIP</item>
     </style>
 </resources>
