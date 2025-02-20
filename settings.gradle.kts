@@ -26,3 +26,5 @@ rootProject.name = "Vale VoIP"
 include(":app")
 include(":telecom")
 include(":pjsua2")
+include(":domain")
+include(":data")
