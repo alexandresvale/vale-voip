@@ -1,4 +1,4 @@
-package com.example.valevoip.presentation.ui.theme
+package com.example.valevoip.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
