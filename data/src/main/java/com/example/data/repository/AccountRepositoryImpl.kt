@@ -13,4 +13,6 @@ class AccountRepositoryImpl(
     override suspend fun getAccount(): AccountModel? = accountDao.getAccount()?.toDomain()
 
     override suspend fun insertAccount(accountModel: AccountModel) = accountDao.insertAccount(accountModel.toData())
+
+    override suspend fun clearAccount() = accountDao.clearAccount()
 }
