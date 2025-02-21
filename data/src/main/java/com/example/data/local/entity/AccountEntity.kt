@@ -1,9 +1,9 @@
-package com.example.valevoip.data.datasource.local.entity
+package com.example.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "config")
+@Entity(tableName = "account")
 data class AccountEntity(
     @PrimaryKey val id: Int = 1,
     val username: String,

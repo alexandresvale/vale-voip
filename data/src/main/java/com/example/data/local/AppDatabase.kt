@@ -1,9 +1,9 @@
-package com.example.valevoip.data.datasource.local
+package com.example.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import com.example.valevoip.data.datasource.local.dao.AccountDao
-import com.example.valevoip.data.datasource.local.entity.AccountEntity
+import com.example.data.local.dao.AccountDao
+import com.example.data.local.entity.AccountEntity
 
 @Database(
     version = 1,

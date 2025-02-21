@@ -1,14 +1,14 @@
-package com.example.valevoip.data.datasource.local.dao
+package com.example.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.example.valevoip.data.datasource.local.entity.AccountEntity
+import com.example.data.local.entity.AccountEntity
 
 @Dao
 interface AccountDao {
-    @Query("SELECT * FROM config WHERE id = 1")
+    @Query("SELECT * FROM account WHERE id = 1")
     suspend fun getAccount(): AccountEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

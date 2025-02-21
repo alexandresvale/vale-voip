@@ -1,6 +1,6 @@
-package com.example.valevoip.data
+package com.example.domain.repository
 
-import com.example.valevoip.domain.model.AccountModel
+import com.example.domain.model.AccountModel
 
 interface AccountRepository {
     suspend fun getAccount(): AccountModel?
