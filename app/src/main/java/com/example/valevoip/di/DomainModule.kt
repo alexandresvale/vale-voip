@@ -2,6 +2,7 @@ package com.example.valevoip.di
 
 import com.example.domain.repository.AccountRepository
 import com.example.domain.repository.ValeVoipService
+import com.example.domain.usecase.GetAccountUseCase
 import com.example.domain.usecase.RegisterUserUseCase
 import com.example.domain.usecase.UnregisterAccountUseCase
 import dagger.Module
@@ -27,5 +28,12 @@ object DomainModule {
         repository: AccountRepository
     ): UnregisterAccountUseCase {
         return UnregisterAccountUseCase(valeVoipService = valeVoipService, repository = repository)
+    }
+
+    @Provides
+    fun provideGetAccountUseCase(
+        accountRepository: AccountRepository
+    ): GetAccountUseCase {
+        return GetAccountUseCase(accountRepository = accountRepository)
     }
 }
