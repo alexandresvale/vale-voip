@@ -3,6 +3,7 @@ package com.example.valevoip.di
 import com.example.domain.repository.AccountRepository
 import com.example.domain.repository.ValeVoipService
 import com.example.domain.usecase.RegisterUserUseCase
+import com.example.domain.usecase.UnregisterAccountUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,9 +15,17 @@ object DomainModule {
 
     @Provides
     fun provideRegisterUserUseCase(
-        service: ValeVoipService,
+        valeVoipService: ValeVoipService,
         repository: AccountRepository
     ): RegisterUserUseCase {
-        return RegisterUserUseCase(voipService = service, repository = repository)
+        return RegisterUserUseCase(valeVoipService = valeVoipService, repository = repository)
+    }
+
+    @Provides
+    fun provideUnregisterAccountUseCase(
+        valeVoipService: ValeVoipService,
+        repository: AccountRepository
+    ): UnregisterAccountUseCase {
+        return UnregisterAccountUseCase(valeVoipService = valeVoipService, repository = repository)
     }
 }

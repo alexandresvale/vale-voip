@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface ValeVoipService {
     suspend fun registerUser(username: String, password: String, domain: String): Flow<RegistrationStatus>
+    suspend fun unregister(): Flow<RegistrationStatus>
     fun makeCall(number: String): Result<Unit>
     fun hangUp(): Result<Unit>
 //    fun onIncomingCall(listener: (Call) -> Unit)
