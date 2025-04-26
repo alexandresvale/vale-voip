@@ -32,11 +32,11 @@ jobs:
       - name: Construir APK
         run: bash ./gradlew assembleDebug --stacktrace
 
-      - name: Fazer upload do APK como artefato
-        uses: actions/upload-artifact@v2
-        with:
-          name: apk-debug
-          path: app/build/outputs/apk/debug/apk-debug.apk
+      #- name: Fazer upload do APK como artefato
+        #uses: actions/upload-artifact@v2
+        #with:
+          #name: apk-debug
+          #path: app/build/outputs/apk/debug/apk-debug.apk
 
       - name: Executar Testes
         run: ./gradlew test
