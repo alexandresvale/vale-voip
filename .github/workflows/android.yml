@@ -34,7 +34,7 @@ jobs:
         run: ./gradlew assembleDebug
 
       - name: Fazer upload do APK como artefato
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@2f92a1084d129345176a2c322a335c845d591d02
         with:
           name: apk-debug
           path: app/build/outputs/apk/debug/*.apk
