@@ -5,6 +5,7 @@ on:
     branches: [ "main", "dev" ]
   pull_request:
     branches: [ "main", "dev" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -35,7 +36,7 @@ jobs:
         uses: actions/upload-artifact@v2.3.1
         with:
           name: apk-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/apk-debug.apk
 
       - name: Executar Testes
         run: ./gradlew test
