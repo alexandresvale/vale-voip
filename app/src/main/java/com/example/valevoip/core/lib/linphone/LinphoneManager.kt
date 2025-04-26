@@ -16,11 +16,11 @@ import org.linphone.core.RegistrationState
 import org.linphone.core.TransportType
 import javax.inject.Inject
 
-class LinphoneManager @Inject constructor(
+class LinphoneManagerInternal @Inject constructor(
     private val context: Context
 ) {
     private val factory = Factory.instance()
-    private lateinit var core: Core
+    lateinit var core: Core
 
     // Flow para emitir os eventos de chamadas
     private val _callStateFlow = MutableStateFlow<Call.State?>(null)
@@ -101,6 +101,7 @@ class LinphoneManager @Inject constructor(
         startLinphone()
     }
 
+    // Já implementado na nova LinphoneManager
     private fun startLinphone() {
         factory.enableLogcatLogs(true)
         core = Factory.instance().createCore(null, null, context)
@@ -108,6 +109,13 @@ class LinphoneManager @Inject constructor(
         core.start()
     }
 
+    // Já implementado na nova LinphoneManager
+    fun stop() {
+        core.stop()
+        core.removeListener(coreListener)
+    }
+
+    // Já implementado na nova LinphoneService
     fun registerAccount(username: String, password: String, domain: String, callback: (RegistrationState) -> Unit) {
         val authInfo = factory.createAuthInfo(
             username, null, password, null, null, domain, null
@@ -130,6 +138,7 @@ class LinphoneManager @Inject constructor(
     }
 
 
+    // Já implementado na nova LinphoneService
     fun unregister(callback: (RegistrationState) -> Unit) {
         val account = core.defaultAccount
         account ?: return
@@ -142,6 +151,7 @@ class LinphoneManager @Inject constructor(
         }
     }
 
+    // Já implementado na nova LinphoneManager
     fun delete() {
         val account = core.defaultAccount
         account ?: return
@@ -191,6 +201,7 @@ class LinphoneManager @Inject constructor(
         Log.d("ALE", "LinphoneManager | $string")
     }
 
+    // Já implementado na nova LinphoneManager
     private fun getAccountParams(
         username: String,
         domain: String

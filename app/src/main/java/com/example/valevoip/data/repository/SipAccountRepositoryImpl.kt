@@ -1,7 +1,7 @@
 package com.example.valevoip.data.repository
 
 import android.util.Log
-import com.example.valevoip.core.lib.linphone.LinphoneManager
+import com.example.valevoip.core.lib.linphone.LinphoneManagerInternal
 import com.example.valevoip.data.SipAccountRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +14,7 @@ import org.linphone.core.Call
 import org.linphone.core.RegistrationState
 
 class SipAccountRepositoryImpl(
-    private val linphoneManager: LinphoneManager,
+    private val linphoneManager: LinphoneManagerInternal,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : SipAccountRepository {
 

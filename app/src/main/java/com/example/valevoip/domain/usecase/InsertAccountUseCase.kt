@@ -1,7 +1,7 @@
 package com.example.valevoip.domain.usecase
 
-import com.example.valevoip.data.AccountRepository
-import com.example.valevoip.domain.model.AccountModel
+import com.example.domain.repository.AccountRepository
+import com.example.domain.model.AccountModel
 
 class InsertAccountUseCase(
     private val accountRepository: AccountRepository

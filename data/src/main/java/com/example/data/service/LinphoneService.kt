@@ -56,10 +56,54 @@ class LinphoneService(
         account.addListener(callback)
 
         logEvent("Linphone Core ${linphoneManager.getCore().version}")
+        logEvent("Thread atual: ${Thread.currentThread().name}")
 
         awaitClose {
             logEvent("registerUser awaitClose")
             account.removeListener(callback) // Remove o listener quando o Flow for cancelado
+        }
+    }
+
+    override suspend fun unregister(): Flow<RegistrationStatus> = callbackFlow {
+        logEvent("[Account] Unregister")
+        val account = linphoneManager.getCore().defaultAccount
+        logEvent("[Account] Unregister account = $account")
+
+        if (account == null) {
+            logEvent("[Account] Não há conta")
+            close(Exception("Não há conta")) // Fecha o Flow e propaga a exceção
+            return@callbackFlow
+        }
+
+        logEvent("[Account] Unregister account isRegisterEnabled = ${account.params.isRegisterEnabled}")
+
+        val accountParams = account.params.clone()
+        accountParams.isRegisterEnabled = false
+        account.params = accountParams
+        val callback = AccountListener { _, state, message ->
+            logEvent("[Account] Unregister state changed: $state, $message")
+            val status = state.toDomain()
+            trySend(status).isSuccess
+
+            when (status) {
+                RegistrationStatus.Cleared -> {
+                    logEvent("[Account] Unregister bem-sucedido! Encerrando fluxo.")
+                    close()
+                }
+
+                RegistrationStatus.Failed -> {
+                    logEvent("[Account] Unregister falha status = $status")
+                    logEvent("[Account] Unregister falha message = $message")
+                    close(Exception(message))
+                }
+
+                else -> {}
+            }
+        }
+        account.addListener(callback)
+        awaitClose {
+            logEvent("Unregister awaitClose")
+            account.removeListener(callback)
         }
     }
 

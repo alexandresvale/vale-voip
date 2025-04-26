@@ -4,7 +4,10 @@
 
 <!--    <uses-sdk android:minSdkVersion="24" />-->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"/>
 
     <uses-permission android:name="android.permission.NEW_OUTGOING_CALL" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
@@ -54,9 +57,22 @@
             android:foregroundServiceType="phoneCall|camera|microphone"
             android:stopWithTask="false" />
 
+        <service android:name=".core.service.CallService"
+            android:foregroundServiceType="phoneCall|camera|microphone"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:description="@string/app_name"/>
+
+        <receiver android:name=".core.service.LinphoneServiceRestartReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
+
 
         <activity
-            android:name=".presentation.main.presentation.MainActivity"
+            android:name=".main.presentation.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.ValeVoIP.MySplash">
             <intent-filter>
