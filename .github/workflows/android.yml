@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Configurando o Java e Android SDK
       - name: Checkout do Código
         uses: actions/checkout@v4
 
@@ -29,17 +28,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Construindo o projeto
       - name: Construir APK
         run: ./gradlew assembleDebug
 
       - name: Fazer upload do APK como artefato
-        uses: actions/upload-artifact@2f92a1084d129345176a2c322a335c845d591d02
+        uses: actions/upload-artifact@v2.3.1
         with:
           name: apk-debug
           path: app/build/outputs/apk/debug/*.apk
 
-      # Executando Testes
       - name: Executar Testes
         run: ./gradlew test
 
