@@ -1,7 +1,8 @@
-package com.example.valevoip.presentation.feature.debug
+package com.example.valevoip.feature.debug
 
 sealed class DebugAction {
-    data object Register : DebugAction()
+    data object RegisterUser : DebugAction()
+    data object FetchUser : DebugAction()
     data object Unregister : DebugAction()
     data object Retry : DebugAction()
     data object Call: DebugAction()

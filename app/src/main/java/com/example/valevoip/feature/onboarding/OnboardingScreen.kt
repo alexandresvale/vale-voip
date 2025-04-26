@@ -1,4 +1,4 @@
-package com.example.valevoip.presentation.feature.onboarding.presentation.screen
+package com.example.valevoip.feature.onboarding
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
-import com.example.valevoip.presentation.ui.componet.TopBarUiVale
+import com.example.valevoip.ui.componet.TopBarUiVale
 
 
 @Composable
@@ -33,7 +33,7 @@ fun OnboardingContent() {
             ) {
                 Text(text = "Alexandre")
             }
-        },
+        }
     )
 }
 

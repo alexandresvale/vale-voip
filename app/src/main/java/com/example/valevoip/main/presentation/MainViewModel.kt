@@ -1,11 +1,11 @@
-package com.example.valevoip.presentation.main.presentation
+package com.example.valevoip.main.presentation
 
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.valevoip.domain.usecase.GetAccountUseCase
+import com.example.domain.usecase.GetAccountUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject

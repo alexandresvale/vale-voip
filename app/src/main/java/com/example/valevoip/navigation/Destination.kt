@@ -1,4 +1,4 @@
-package com.example.valevoip.presentation.navigation
+package com.example.valevoip.navigation
 
 sealed class Destinations(val route: String) {
     data object Onboarding : Destinations("onboarding")

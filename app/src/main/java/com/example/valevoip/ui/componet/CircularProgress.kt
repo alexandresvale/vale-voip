@@ -1,4 +1,4 @@
-package com.example.valevoip.presentation.ui.componet
+package com.example.valevoip.ui.componet
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

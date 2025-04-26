@@ -1,14 +1,13 @@
-package com.example.valevoip.presentation.navigation
+package com.example.valevoip.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.valevoip.presentation.feature.onboarding.presentation.screen.OnboardingScreen
-import com.example.valevoip.presentation.main.presentation.screen.MainScreen
-import com.example.valevoip.presentation.feature.debug.DebugContent
-import com.example.valevoip.presentation.feature.debug.DebugScreen
+import com.example.valevoip.feature.onboarding.OnboardingScreen
+import com.example.valevoip.main.presentation.screen.MainScreen
+import com.example.valevoip.feature.debug.DebugScreen
 
 @Composable
 fun SetupNavGraph(

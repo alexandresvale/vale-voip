@@ -1,19 +1,24 @@
-package com.example.valevoip.presentation.main.presentation
+package com.example.valevoip.main.presentation
 
 import android.Manifest
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.example.valevoip.core.extension.requestPermissions
-import com.example.valevoip.core.lib.linphone.LinphoneManager
-import com.example.valevoip.presentation.navigation.Destinations
-import com.example.valevoip.presentation.navigation.SetupNavGraph
-import com.example.valevoip.presentation.ui.theme.ValeVoIPTheme
+import com.example.valevoip.core.lib.linphone.LinphoneManagerInternal
+import com.example.valevoip.core.service.CallService
+import com.example.valevoip.navigation.Destinations
+import com.example.valevoip.navigation.SetupNavGraph
+import com.example.valevoip.ui.theme.ValeVoipTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -30,20 +35,24 @@ class MainActivity : ComponentActivity() {
         Manifest.permission.VIBRATE,
         Manifest.permission.ACCESS_WIFI_STATE,
         Manifest.permission.WAKE_LOCK,
-        Manifest.permission.MODIFY_AUDIO_SETTINGS
+        Manifest.permission.MODIFY_AUDIO_SETTINGS,
+        Manifest.permission.POST_NOTIFICATIONS
     )
 
-    private lateinit var manager: LinphoneManager
+    private lateinit var manager: LinphoneManagerInternal
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installSplashScreen()
-
+        lifecycleScope.launch {
+            delay(5000)
+        }
         requestPermissions(
             permissions = useSipPermission,
             rationale = "É necessário conceder permissões para utilizar o SIP.",
             onGranted = {
                 logEvent("Permissão ok.")
+                startCallService()
             },
             onDenied = {
                 logEvent("Permissão não ok.")
@@ -51,7 +60,7 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            ValeVoIPTheme {
+            ValeVoipTheme {
                 val navController = rememberNavController()
                 SetupNavGraph(
                     startDestination = Destinations.Debug.route,
@@ -61,6 +70,12 @@ class MainActivity : ComponentActivity() {
         }
 //        mainViewModel.checkUseConfig()
 
+    }
+
+    private fun startCallService() {
+        val intent = Intent(this, CallService::class.java)
+        intent.action = CallService.Actions.START.toString()
+        startService(intent)
     }
 
 

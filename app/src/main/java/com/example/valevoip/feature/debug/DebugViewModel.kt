@@ -1,13 +1,11 @@
-package com.example.valevoip.presentation.feature.debug
+package com.example.valevoip.feature.debug
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.valevoip.domain.usecase.AcceptUseCase
-import com.example.valevoip.domain.usecase.GetCallStateUseCase
-import com.example.valevoip.domain.usecase.GetRegistrationStateUseCase
-import com.example.valevoip.domain.usecase.RegisterAccountUseCase
-import com.example.valevoip.domain.usecase.UnregisterAccountUseCase
+import com.example.domain.usecase.GetAccountUseCase
+import com.example.domain.usecase.RegisterUserUseCase
+import com.example.domain.usecase.UnregisterAccountUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,16 +15,16 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.linphone.core.RegistrationState
 import javax.inject.Inject
 
 @HiltViewModel
 class DebugViewModel @Inject constructor(
-    private val registerAccountUseCase: RegisterAccountUseCase,
+    private val registerUserUseCase: RegisterUserUseCase,
     private val unregisterAccountUseCase: UnregisterAccountUseCase,
-    private val acceptUseCase: AcceptUseCase,
-    private val getRegistrationStateUseCase: GetRegistrationStateUseCase,
-    private val getCallStateUseCase: GetCallStateUseCase
+    private val getAccountUseCase: GetAccountUseCase
+//    private val getRegistrationStateUseCase: GetRegistrationStateUseCase,
+//    private val acceptUseCase: AcceptUseCase,
+//    private val getCallStateUseCase: GetCallStateUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DebugState())
@@ -40,7 +38,8 @@ class DebugViewModel @Inject constructor(
     fun onAction(action: DebugAction) {
         logEvent("onAction $action")
         when (action) {
-            is DebugAction.Register -> registerAccount()
+            is DebugAction.RegisterUser -> registerUser()
+            is DebugAction.FetchUser -> checkUseConfig()
             is DebugAction.Unregister -> unregisterAccount()
             is DebugAction.IncomingCall -> acceptCall()
             is DebugAction.Retry -> {}
@@ -48,22 +47,26 @@ class DebugViewModel @Inject constructor(
         }
     }
 
-    private fun registerAccount() {
+    private fun registerUser() {
         viewModelScope.launch {
-            registerAccountUseCase.invoke(userName = "5002", password = "5002", "192.168.100.12")
-                .onStart { setState { it.setLoadingState(isLoading = true) } }
-                .onCompletion { setState { it.setLoadingState(isLoading = false) } }
-                .catch { throwable ->
-                    logEvent("registerAccount catch $throwable")
-                    setState { it.setErrorState(errorMessage = throwable.message ?: "fail") }
+            registerUserUseCase(userName = "5002", password = "5002", "192.168.100.12")
+                .onStart {
+                    setState { it.setLoadingState(isLoading = true) }
+                    logEvent("onStart")
                 }
-                .collect { registerState ->
-                    logEvent("registerAccount flow collect = $registerState")
-                    if (registerState != RegistrationState.Progress) {
-                        setState { it.setSuccessState(message = registerState.name) }
-                    }
+                .onCompletion {
+                    setState { it.setLoadingState(isLoading = false) }
+                    logEvent("onCompletion - $it")
                 }
+                .catch {
+                    logEvent("Error = $it")
+                }
+                .collect {
+                    logEvent("Sucesso = $it")
+                }
+            logEvent("Thread atual launch: ${Thread.currentThread().name}")
         }
+        logEvent("Thread atual: ${Thread.currentThread().name}")
     }
 
     private fun unregisterAccount() {
@@ -81,10 +84,22 @@ class DebugViewModel @Inject constructor(
         }
     }
 
-    private fun acceptCall() {
+    private fun checkUseConfig() {
         viewModelScope.launch {
-            acceptUseCase()
+            logEvent("registerAccount flow collect")
+            val configModel = getAccountUseCase()
+            if (configModel != null) {
+                logEvent("ConfigModel não é nulo = $configModel")
+            } else {
+                logEvent("ConfigModel é nulo = $configModel")
+            }
         }
+    }
+
+    private fun acceptCall() {
+        /*viewModelScope.launch {
+            acceptUseCase()
+        }*/
     }
 
     private fun call() {
@@ -92,7 +107,7 @@ class DebugViewModel @Inject constructor(
     }
 
     private fun getRegistrationState() {
-        viewModelScope.launch {
+        /*viewModelScope.launch {
             getRegistrationStateUseCase()
                 .onStart { logEvent("RegistrationStateUseCase onStart") }
                 .onCompletion { logEvent("RegistrationStateUseCase onCompletion") }
@@ -100,11 +115,11 @@ class DebugViewModel @Inject constructor(
                 .collect {
                     logEvent("RegistrationStateUseCase collect = $it")
                 }
-        }
+        }*/
     }
 
     private fun getCallState() {
-        viewModelScope.launch {
+        /*viewModelScope.launch {
             getCallStateUseCase()
                 .onStart { logEvent("CallState onStart") }
                 .onCompletion { logEvent("CallState onCompletion") }
@@ -112,7 +127,7 @@ class DebugViewModel @Inject constructor(
                 .collect {
                     logEvent("CallState collect = $it")
                 }
-        }
+        }*/
     }
 
 

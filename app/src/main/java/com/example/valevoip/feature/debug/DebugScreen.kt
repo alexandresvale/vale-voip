@@ -1,4 +1,4 @@
-package com.example.valevoip.presentation.feature.debug
+package com.example.valevoip.feature.debug
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,9 +21,9 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.valevoip.presentation.ui.componet.AlertDialogCompose
-import com.example.valevoip.presentation.ui.componet.CircularProgress
-import com.example.valevoip.presentation.ui.theme.ValeVoIPTheme
+import com.example.valevoip.ui.componet.AlertDialogCompose
+import com.example.valevoip.ui.componet.CircularProgress
+import com.example.valevoip.ui.theme.ValeVoipTheme
 
 @Composable
 fun DebugScreen(
@@ -76,7 +76,7 @@ fun DebugContent(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )
         Button(
-            onClick = { action?.invoke(DebugAction.Register) },
+            onClick = { action?.invoke(DebugAction.RegisterUser) },
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
@@ -98,14 +98,14 @@ fun DebugContent(
             Text(text = "Deslogar")
         }
         Button(
-            onClick = { onDelete.invoke() },
+            onClick = { action?.invoke(DebugAction.FetchUser) },
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
                 .padding(all = 16.dp)
         )
         {
-            Text(text = "Deletar")
+            Text(text = "Obter Usuário")
         }
         Button(
             onClick = { action?.invoke(DebugAction.IncomingCall) },
@@ -116,6 +116,16 @@ fun DebugContent(
         )
         {
             Text(text = "Aceitar ligação")
+        }
+        Button(
+            onClick = { action?.invoke(DebugAction.RegisterUser) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .padding(all = 16.dp)
+        )
+        {
+            Text(text = "Registar Conta")
         }
     }
 
@@ -139,7 +149,7 @@ fun DebugContent(
 fun DebugContentPreview(
     @PreviewParameter(DebugStateParameterProvider::class) debugState: DebugState
 ) {
-    ValeVoIPTheme {
+    ValeVoipTheme {
         DebugContent(
             state = debugState,
             name = "Android",

@@ -1,4 +1,4 @@
-package com.example.valevoip.presentation.main.presentation
+package com.example.valevoip.main.presentation
 
 data class MainUiState(
     val isLoading: Boolean = false,

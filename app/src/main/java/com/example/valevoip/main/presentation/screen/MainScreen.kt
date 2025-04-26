@@ -1,4 +1,4 @@
-package com.example.valevoip.presentation.main.presentation.screen
+package com.example.valevoip.main.presentation.screen
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -28,10 +28,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.example.valevoip.presentation.main.presentation.MainUiState
-import com.example.valevoip.presentation.main.presentation.MainViewModel
-import com.example.valevoip.presentation.navigation.Destinations
-import com.example.valevoip.presentation.navigation.SetupNavGraph
+import com.example.valevoip.main.presentation.MainUiState
+import com.example.valevoip.main.presentation.MainViewModel
+import com.example.valevoip.navigation.Destinations
+import com.example.valevoip.navigation.SetupNavGraph
 
 @Composable
 fun MainScreen(
