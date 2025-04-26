@@ -33,6 +33,12 @@ jobs:
       - name: Construir APK
         run: ./gradlew assembleDebug
 
+      - name: Fazer upload do APK como artefato
+        uses: actions/upload-artifact@v3
+        with:
+          name: apk-debug
+          path: app/build/outputs/apk/debug/*.apk
+
       # Executando Testes
       - name: Executar Testes
         run: ./gradlew test
