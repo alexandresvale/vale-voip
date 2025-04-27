@@ -1,0 +1,30 @@
+name: Executar Testes
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Executar teste unitários.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout no projeto
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Conceder permissão de execução para gradlew
+        run: chmod +x gradlew
+
+      - name: Executar Testes unitários
+        run: ./gradlew clean testDebug
