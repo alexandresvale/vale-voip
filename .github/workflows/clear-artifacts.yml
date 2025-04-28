@@ -25,3 +25,26 @@ jobs:
           | xargs -I {} \
           curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           https://api.github.com/repos/${{ github.repository }}/actions/artifacts/{}
+
+      - name: Listar Artefatos
+        run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/actions/artifacts \
+          | jq '.artifacts[] | {id: .id, name: .name}'
+
+      - name: Remover Artefato Específico
+        run: |
+          echo "Excluindo o artefato app-debug..."
+          curl -X DELETE \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/actions/artifacts/ID_DO_ARTEFATO
+
+      - name: Remover Artefatos Antigos
+        run: |
+          echo "Excluindo artefatos antigos..."
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/actions/artifacts \
+          | jq '.artifacts[] | select(.created_at < "'$(date -I -d '7 days ago')'") | .id' \
+          | xargs -I {} \
+          curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/actions/artifacts/{}
