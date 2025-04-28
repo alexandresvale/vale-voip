@@ -1,0 +1,17 @@
+name: Limpar Artefatos Antigos
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Listar e Excluir Artefatos
+        run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/actions/artifacts \
+          | jq '.artifacts[] | select(.expired == true) | .id' | xargs -I {} \
+          curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/actions/artifacts/{}
