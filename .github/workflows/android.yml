@@ -27,7 +27,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Executar Testes
-        run: ./gradlew test — stacktrace
+        run: ./gradlew test --stacktrace
 
   build:
     name: Build do APK
