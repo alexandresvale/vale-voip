@@ -1,10 +1,10 @@
 name: Gerar versão de teste
 
 on:
-  push:
-    branches: [ "main", "dev" ]
   pull_request:
     branches: [ "main", "dev" ]
+    types:
+      - labeled # Dispara quando uma label é adicionada ao PR
   workflow_dispatch:
 
 jobs:
@@ -32,6 +32,9 @@ jobs:
   build:
     name: Build do APK
     runs-on: ubuntu-latest
+
+    # Condição para executar apenas se a label for 'build apk test'
+    if: ${{ github.event.label.name == 'build apk test' }}
 
     steps:
       - name: Checkout do Código
