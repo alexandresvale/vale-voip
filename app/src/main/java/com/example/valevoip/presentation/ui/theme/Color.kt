@@ -1,8 +1,8 @@
-package com.example.valevoip.ui.theme
+package com.example.valevoip.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val primaryLight = Color(0xFF37618E)
+val primaryLight = Color(0xFF0D47A1)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFD2E4FF)
 val onPrimaryContainerLight = Color(0xFF1B4975)

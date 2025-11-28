@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">Vale VoIP</string>
+
+    <!-- Start Onboarding -->
+    <string name="vale_voip_onboarding_welcome">Bem-vindos</string>
+    <string name="vale_voip_onboarding_subtitle">Informe usuário e senha do seu servidor SIP.</string>
+    <string name="vale_voip_onboarding_username_hint">Nome de usuário</string>
+    <string name="vale_voip_onboarding_username_aux">user@dominio.com</string>
+    <string name="vale_voip_onboarding_password_hint">Senha</string>
+    <string name="vale_voip_onboarding_port_hint">Porta</string>
+    <string name="vale_voip_onboarding_start_button">Iniciar</string>
+    <!-- End Onboarding -->
+
 </resources>
