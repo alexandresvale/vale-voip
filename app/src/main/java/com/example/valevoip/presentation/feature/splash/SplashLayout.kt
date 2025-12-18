@@ -19,9 +19,11 @@ import androidx.compose.ui.unit.dp
 import com.example.valevoip.R
 import com.example.valevoip.presentation.ui.theme.onPrimaryLight
 import com.example.valevoip.presentation.ui.theme.primaryLight
+import com.example.valevoip.presentation.ui.util.SystemBarsController
 
 @Composable
 fun SplashLayout() {
+    SystemBarsController(useDarkIcons = false)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -44,7 +46,7 @@ fun SplashLayout() {
     }
 }
 
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, apiLevel = 36)
 @Composable
 fun SplashLayoutPreview() {
     SplashLayout()
