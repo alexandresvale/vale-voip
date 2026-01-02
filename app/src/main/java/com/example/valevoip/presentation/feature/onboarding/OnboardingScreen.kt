@@ -1,6 +1,11 @@
 package com.example.valevoip.presentation.feature.onboarding
 
-import android.util.Log
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,7 +25,6 @@ fun OnboardingScreen(
     val snackBarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        Log.d("####", "OnboardingScreen LaunchedEffect")
         viewModel.effect.collect { effect ->
             when (effect) {
                 is OnboardingEffect.NavigateToDialer -> {
@@ -28,16 +32,36 @@ fun OnboardingScreen(
                 }
 
                 is OnboardingEffect.ShowErrorSnackBar -> {
-                    snackBarHostState.showSnackbar(message = effect.message)
+                    snackBarHostState.showSnackbar(
+                        message = effect.message,
+                        actionLabel = "OK",
+                        duration = SnackbarDuration.Short,
+                        withDismissAction = true
+                    )
                 }
             }
         }
     }
 
-    OnboardingLayout(
-        uiState = uiState,
-        onEvent = viewModel::onEvent
-    )
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackBarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    actionColor = MaterialTheme.colorScheme.onErrorContainer,
+                    dismissActionContentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { paddingValues ->
+        OnboardingLayout(
+            uiState = uiState,
+            onEvent = viewModel::onEvent
+        )
+    }
 }
 
 @Preview(showSystemUi = true)
