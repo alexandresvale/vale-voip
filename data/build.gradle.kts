@@ -10,9 +10,11 @@ android {
     namespace = "com.example.data" // Altere para o seu pacote correto
     compileSdk = 34
 
-    /*defaultConfig {
+    defaultConfig {
         minSdk = 24
-    }*/
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -41,5 +43,9 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
+
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.hilt.android.testing)
 
 }

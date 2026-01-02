@@ -24,7 +24,7 @@ android {
         }
 
         /*ndk {
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"*//*, "x86", "x86_64"*//*))
         }*/
 
         /*externalNativeBuild {
@@ -56,6 +56,13 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
+    kotlin {
+        jvmToolchain {
+            languageVersion.set(JavaLanguageVersion.of(17))
+            vendor.set(JvmVendorSpec.AZUL)
+        }
+    }
+
     buildFeatures {
         compose = true
     }
@@ -106,6 +113,7 @@ dependencies {
     implementation(libs.ui.tooling.preview)
     implementation(libs.material3)
     implementation(libs.material)
+    implementation(libs.material.icons.extended)
 
     // Lifecycle
     implementation(libs.androidx.lifecycle.runtime.ktx)
