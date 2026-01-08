@@ -11,9 +11,9 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.example.data.service.LinphoneManager
 import com.example.valevoip.R
-import com.example.valevoip.core.lib.linphone.LinphoneManagerInternal
-import com.example.valevoip.main.presentation.MainActivity
+import com.example.valevoip.presentation.feature.main.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +27,7 @@ import javax.inject.Inject
 class CallService : Service() {
 
     @Inject
-    lateinit var linphoneManager: LinphoneManagerInternal
+    lateinit var linphoneManager: LinphoneManager
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
 
@@ -35,7 +35,7 @@ class CallService : Service() {
     override fun onCreate() {
         super.onCreate()
         observeLinphoneEvents()
-        logEvent("Service iniciado = ${linphoneManager.core.version}")
+        logEvent("Service iniciado = depois colocar a versão")
     }
 
     override fun onDestroy() {
@@ -98,19 +98,17 @@ class CallService : Service() {
         // Observa os eventos de chamadas e registros
 
         serviceScope.launch {
-            linphoneManager.callStateFlow.collect { state ->
-                if (state != null) {
-                    handleCallState(state)
-                }
+            linphoneManager.observeCoreCallState().collect { state ->
+                handleCallState(state)
             }
         }
 
         serviceScope.launch {
-            linphoneManager.registrationStateFlow.collect { registrationState ->
+            /*linphoneManager.registrationStateFlow.collect { registrationState ->
                 registrationState?.let {
                     handleRegistrationState(it)
                 }
-            }
+            }*/
         }
 
     }

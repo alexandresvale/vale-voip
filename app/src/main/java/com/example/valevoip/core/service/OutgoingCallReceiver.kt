@@ -1,9 +1,9 @@
-package com.example.valevoip
+package com.example.valevoip.core.service
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.example.valevoip.main.presentation.MainActivity
+import com.example.valevoip.presentation.feature.main.MainActivity
 
 class OutgoingCallReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
