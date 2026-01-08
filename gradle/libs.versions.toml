@@ -27,6 +27,7 @@ fragment-ktx = "1.5.6"
 runtime-livedata = "1.6.8"
 ui-text-google-fonts = "1.7.8"
 jetbrains-kotlin-jvm = "2.1.0"
+javaxInject = "1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
@@ -78,6 +79,9 @@ androidx-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text
 
 # Android Runner
 androidx-test-runner = { group = "androidx.test", name = "runner", version = "1.5.2" }
+
+# Javax Inject para adicionar a notação @Inject no usecase.
+javax-inject = { group = "javax.inject", name = "javax.inject", version.ref = "javaxInject" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
