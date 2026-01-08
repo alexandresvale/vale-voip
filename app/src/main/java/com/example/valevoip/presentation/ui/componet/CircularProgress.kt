@@ -43,7 +43,6 @@ fun CircularProgress(
             )
         }
     }
-
 }
 
 @Preview(showBackground = true, showSystemUi = true, device = Devices.NEXUS_5X)
