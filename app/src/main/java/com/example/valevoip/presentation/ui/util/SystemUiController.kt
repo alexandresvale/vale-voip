@@ -11,13 +11,15 @@ import androidx.core.view.WindowCompat
 @Composable
 fun SystemBarsController(useDarkIcons: Boolean) {
     val view = LocalView.current
-    DisposableEffect(useDarkIcons) {
-        val window = (view.context as Activity).window
-        window.statusBarColor = Color.Transparent.toArgb()
-        window.navigationBarColor = Color.Transparent.toArgb()
-        val insetsController = WindowCompat.getInsetsController(window, view)
-        insetsController.isAppearanceLightStatusBars = useDarkIcons
-        insetsController.isAppearanceLightNavigationBars = useDarkIcons
-        onDispose { }
+    if (!view.isInEditMode) {
+        DisposableEffect(useDarkIcons) {
+            val window = (view.context as Activity).window
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = useDarkIcons
+            insetsController.isAppearanceLightNavigationBars = useDarkIcons
+            onDispose { }
+        }
     }
 }
