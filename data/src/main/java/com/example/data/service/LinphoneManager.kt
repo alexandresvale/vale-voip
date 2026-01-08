@@ -1,18 +1,31 @@
 package com.example.data.service
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
-import org.linphone.core.AccountParams
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import org.linphone.core.AccountListener
 import org.linphone.core.AudioDevice
+import org.linphone.core.Call
 import org.linphone.core.Core
+import org.linphone.core.CoreListenerStub
 import org.linphone.core.Factory
+import org.linphone.core.LogCollectionState
+import org.linphone.core.RegistrationState
 import org.linphone.core.TransportType
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class LinphoneManager(
-    private val context: Context
+@Singleton
+class LinphoneManager @Inject constructor(
+    @ApplicationContext private val context: Context
 ) {
 
-    val factory = Factory.instance()
+    private val factory: Factory by lazy { Factory.instance() }
     private lateinit var core: Core
 
     init {
@@ -21,32 +34,98 @@ class LinphoneManager(
 
     private fun initialize() {
         factory.enableLogcatLogs(true)
-        core = Factory.instance().createCore(null, null, context)
-//        core.addListener(coreListener)
+        val configPath = context.filesDir.absolutePath + "/.linphonerc"
+        val factoryPath = context.filesDir.absolutePath + "/linphone_factory_rc"
+        core = factory.createCore(configPath, factoryPath, context)
+        core.enableLogCollection(LogCollectionState.Enabled)
         core.start()
     }
 
-    fun stop() {
-        core.stop()
-//        core.removeListener(coreListener)
-    }
+    fun stop() = core.stop()
 
-    fun getCore(): Core = core
+    /**
+     * Realiza o registro e retorna um Flow com o estado da tentativa.
+     * O Manager cuida da criação de params, authInfo, etc.
+     */
+    fun registerAccount(username: String, domain: String, password: String): Flow<RegistrationState> = callbackFlow {
+        clearExistingAccounts()
 
-    fun getAccountParams(
-        username: String,
-        domain: String
-    ): AccountParams {
-        val identity = Factory.instance().createAddress("sip:$username@$domain")
-        val address = Factory.instance().createAddress("sip:$domain")?.apply {
-            transport = TransportType.Udp
-        }
+        val authInfo = factory.createAuthInfo(username, null, password, null, null, domain, null)
 
-        return core.createAccountParams().apply {
+        val identity = factory.createAddress("sip:$username@$domain")
+        val address = factory.createAddress("sip:$domain")?.apply { transport = TransportType.Udp }
+        val params = core.createAccountParams().apply {
             identityAddress = identity
             serverAddress = address
             isRegisterEnabled = true
         }
+
+        val account = core.createAccount(params)
+
+        core.addAuthInfo(authInfo)
+        core.addAccount(account)
+        core.defaultAccount = account
+
+        val listener = AccountListener { _, state, message ->
+            logEvent("Registration State: $state | Msg: $message")
+            trySend(state).isSuccess
+        }
+
+        account.addListener(listener)
+
+        awaitClose {
+            account.removeListener(listener)
+        }
+    }
+
+    fun unregisterAccount(): Flow<RegistrationState> = callbackFlow {
+        val account = core.defaultAccount
+        if (account == null) {
+            logEvent("[Account] Não há conta")
+            close()
+            return@callbackFlow
+        }
+
+        val params = account.params.clone()
+        params.isRegisterEnabled = false
+        account.params = params
+
+        val listener = AccountListener { _, state, message ->
+            logEvent("[Account] Unregister state changed: $state, $message")
+            trySend(state).isSuccess
+        }
+
+        account.addListener(listener)
+        awaitClose {
+            logEvent("Unregister awaitClose")
+            account.removeListener(listener)
+        }
+    }
+
+    private fun clearExistingAccounts() {
+        core.clearAccounts()
+        core.clearAllAuthInfo()
+    }
+
+    fun invite(address: String): Boolean {
+        // Garante que existe uma conta padrão para discar
+        ensureDefaultAccount()
+
+        // Habilita rede no core se necessário
+        core.isNetworkReachable = true
+
+        val call = core.invite(address)
+        return call != null
+    }
+
+    fun terminateCurrentCall() {
+        core.currentCall?.terminate() ?: run {
+            if (core.callsNb > 0) core.terminateAllCalls()
+        }
+    }
+
+    fun acceptCall() {
+        core.currentCall?.accept()
     }
 
     fun delete() {
@@ -58,31 +137,96 @@ class LinphoneManager(
         }
     }
 
-    fun accept() {
-        core.currentCall?.accept()
-        logEvent("accept isMicEnabled = ${core.isMicEnabled}")
-    }
-
-    fun terminate() {
-        core.currentCall?.terminate()
-    }
-
-    fun micEnabled() {
+    /**
+     * Alterna o estado do microfone.
+     * Retorna o novo estado (true = mutado, false = ouvindo).
+     * Nota: Na SDK da Linphone, 'isMicEnabled = true' significa que o mic está ABERTO (não mutado).
+     */
+    fun toggleMicrophone() {
         core.isMicEnabled = !core.isMicEnabled
+        logEvent("Mic alterado. Mutado: ${core.isMicEnabled}")
     }
 
-    fun toggleSpeaker() {
-        val currentAudioDevice = core.currentCall?.outputAudioDevice
-        val speakerEnabled = currentAudioDevice?.type == AudioDevice.Type.Speaker
+    /**
+     * Alterna entre Viva-voz (Speaker) e Earpiece (Ouvido).
+     * Retorna true se o Speaker ficou ativo, false caso contrário.
+     */
+    fun toggleSpeaker(): Boolean {
+        val currentCall = core.currentCall ?: return false
 
-        for (audioDevice in core.audioDevices) {
-            if (speakerEnabled && audioDevice.type == AudioDevice.Type.Earpiece) {
-                core.currentCall?.outputAudioDevice = audioDevice
-                return
-            } else if (!speakerEnabled && audioDevice.type == AudioDevice.Type.Speaker) {
-                core.currentCall?.outputAudioDevice = audioDevice
-                return
+        // Descobre qual dispositivo está em uso agora
+        val currentDevice = currentCall.outputAudioDevice
+        val isSpeakerNow = currentDevice?.type == AudioDevice.Type.Speaker
+
+        // Define o alvo (Se tá Speaker, vai pra Earpiece, e vice-versa)
+        val targetType = if (isSpeakerNow) AudioDevice.Type.Earpiece else AudioDevice.Type.Speaker
+
+        // Busca o dispositivo na lista de hardwares disponíveis do Android
+        val targetDevice = core.audioDevices.find { it.type == targetType }
+
+        // Se achou o dispositivo, aplica.
+        if (targetDevice != null) {
+            currentCall.outputAudioDevice = targetDevice
+            return targetType == AudioDevice.Type.Speaker
+        } else {
+            // Fallback: Se não achou Earpiece (ex: Tablet sem saida de ouvido), tenta Bluetooth ou Aux
+            logEvent("Dispositivo de áudio $targetType não encontrado.")
+            return isSpeakerNow // Mantém estado atual
+        }
+    }
+
+    /**
+     * Verifica se o Speaker está ativo.
+     */
+    fun isSpeakerEnabled(): Boolean {
+        val currentCall = core.currentCall ?: return false
+        return currentCall.outputAudioDevice?.type == AudioDevice.Type.Speaker
+    }
+
+    fun observeCoreCallState(): Flow<Call.State> = callbackFlow {
+        val listener = object : CoreListenerStub() {
+            override fun onCallStateChanged(core: Core, call: Call, state: Call.State, message: String) {
+                Log.d(
+                    "LinphoneManager",
+                    "State: $state | Msg: $message | Call: ${call.core.currentCallRemoteAddress?.toString()}"
+                )
+                trySend(state).isSuccess
             }
+        }
+
+        core.addListener(listener)
+        awaitClose {
+            Log.d("LinphoneManager", "Flow observeCallState cancelado")
+            core.removeListener(listener)
+        }
+    }
+
+    fun getCurrentCallNumber(): String? {
+        val call = core.currentCall ?: core.calls.firstOrNull()
+        Log.d("LinphoneManager", "getCurrentCallNumber = ${call?.remoteAddress}")
+        return call?.remoteAddress?.username
+    }
+
+    fun isNetworkAvailable(): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        // 1. Obtém a rede ativa no momento (Wifi, Dados, VPN, etc)
+        val network = connectivityManager.activeNetwork ?: return false
+
+        // 2. Obtém as capacidades dessa rede (Velocidade, acesso à internet, etc)
+        val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+
+        // 3. Verificação Rigorosa:
+        // NET_CAPABILITY_INTERNET: Significa que a rede foi configurada para acessar a internet (não é apenas uma LAN local)
+        // NET_CAPABILITY_VALIDATED: (Opcional) Significa que o Android pingou o Google e confirmou que há dados reais fluindo.
+        return when {
+            activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) -> true
+            else -> false
+        }
+    }
+
+    private fun ensureDefaultAccount() {
+        if (core.defaultAccount == null && core.accountList.isNotEmpty()) {
+            core.defaultAccount = core.accountList.first()
         }
     }
 

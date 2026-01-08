@@ -2,125 +2,149 @@ package com.example.data.service
 
 import android.util.Log
 import com.example.data.mapper.toDomain
+import com.example.domain.model.CallStatus
 import com.example.domain.model.RegistrationStatus
 import com.example.domain.repository.ValeVoipService
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import org.linphone.core.AccountListener
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.transform
+import org.linphone.core.Call
 
-class LinphoneService(
+internal class LinphoneService(
     private val linphoneManager: LinphoneManager
 ) : ValeVoipService {
 
     override suspend fun registerUser(
         username: String, password: String, domain: String
-    ): Flow<RegistrationStatus> = callbackFlow {
-
-        val authInfo = linphoneManager.factory.createAuthInfo(
-            username, null, password, null, null, domain, null
-        )
-
-        val accountParams = linphoneManager.getAccountParams(username, domain)
-        val account = linphoneManager.getCore().createAccount(accountParams)
-
-        with(linphoneManager.getCore()) {
-            addAuthInfo(authInfo)
-            addAccount(account)
-            defaultAccount = account
-        }
-
-        val callback = AccountListener { account, state, message ->
-            logEvent("[Account] Registration state changed: $state, $message")
-            val status = state.toDomain()
-            logEvent("[Account] state deferred: $status")
-            trySend(status).isSuccess // Envia cada estado para o Flow
-
-            when (status) {
-                RegistrationStatus.Ok -> {
-                    logEvent("[Account] Registro bem-sucedido! Encerrando fluxo.")
-                    close()
-                }
-
-                RegistrationStatus.Failed -> {
-                    // Unauthorized, io error
-                    logEvent("[Account] Falha no registro status = $status")
-                    logEvent("[Account] Falha no registro message = $message")
-                    close(Exception(message))
-                }
-
-                else -> {}
+    ): Flow<RegistrationStatus> {
+        return linphoneManager.registerAccount(username, domain, password)
+            .map { sdkState ->
+                sdkState.toDomain()
             }
-        }
+            .transform { status ->
+                emit(status)
+                when (status) {
+                    RegistrationStatus.Ok -> {
+                        logEvent("Registro concluído com sucesso.")
+                    }
 
-        account.addListener(callback)
+                    RegistrationStatus.Failed -> {
+                        logEvent("Falha no registro.")
+                        throw Exception("Falha ao registrar na SDK") // Ou emitir erro customizado
+                    }
 
-        logEvent("Linphone Core ${linphoneManager.getCore().version}")
-        logEvent("Thread atual: ${Thread.currentThread().name}")
-
-        awaitClose {
-            logEvent("registerUser awaitClose")
-            account.removeListener(callback) // Remove o listener quando o Flow for cancelado
-        }
+                    else -> {}
+                }
+            }
     }
 
-    override suspend fun unregister(): Flow<RegistrationStatus> = callbackFlow {
+    override suspend fun unregister(): Flow<RegistrationStatus> {
         logEvent("[Account] Unregister")
-        val account = linphoneManager.getCore().defaultAccount
-        logEvent("[Account] Unregister account = $account")
-
-        if (account == null) {
-            logEvent("[Account] Não há conta")
-            close(Exception("Não há conta")) // Fecha o Flow e propaga a exceção
-            return@callbackFlow
-        }
-
-        logEvent("[Account] Unregister account isRegisterEnabled = ${account.params.isRegisterEnabled}")
-
-        val accountParams = account.params.clone()
-        accountParams.isRegisterEnabled = false
-        account.params = accountParams
-        val callback = AccountListener { _, state, message ->
-            logEvent("[Account] Unregister state changed: $state, $message")
-            val status = state.toDomain()
-            trySend(status).isSuccess
-
-            when (status) {
-                RegistrationStatus.Cleared -> {
-                    logEvent("[Account] Unregister bem-sucedido! Encerrando fluxo.")
-                    close()
+        return linphoneManager.unregisterAccount()
+            .map { it.toDomain() }
+            .transform { status ->
+                emit(status)
+                if (status == RegistrationStatus.Cleared) {
+                    logEvent("Unregister concluído.")
                 }
-
-                RegistrationStatus.Failed -> {
-                    logEvent("[Account] Unregister falha status = $status")
-                    logEvent("[Account] Unregister falha message = $message")
-                    close(Exception(message))
+                if (status == RegistrationStatus.Failed) {
+                    logEvent("Falha no unregister.")
+                    throw Exception("Falha ao unregister na SDK")
                 }
-
-                else -> {}
             }
-        }
-        account.addListener(callback)
-        awaitClose {
-            logEvent("Unregister awaitClose")
-            account.removeListener(callback)
-        }
     }
+
 
     override fun makeCall(number: String): Result<Unit> {
-        TODO("Not yet implemented")
+        logEvent("[Call] Tentando iniciar chamada para: $number")
+        return try {
+            if (!linphoneManager.isNetworkAvailable()) {
+                return Result.failure(Exception("Sem conexão com a internet."))
+            }
+
+            if (number.isBlank()) {
+                return Result.failure(IllegalArgumentException("Número inválido."))
+            }
+
+            val success = linphoneManager.invite(number)
+
+            if (success) {
+                logEvent("Chamada iniciada para $number")
+                Result.success(Unit)
+            } else {
+                Result.failure(IllegalArgumentException("Erro na SDK ao tentar discar (URI inválida?)"))
+            }
+        } catch (e: Exception) {
+            logEvent("[Call] Exceção crítica ao tentar chamar: ${e.message}")
+            Result.failure(e)
+        }
     }
 
     override fun hangUp(): Result<Unit> {
-        TODO("Not yet implemented")
+        return try {
+            linphoneManager.terminateCurrentCall()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            logEvent("[Call] Erro ao tentar desligar: ${e.message}")
+            Result.failure(e)
+        }
     }
 
-    override fun endCall(callId: String): Result<Unit> {
-        TODO("Not yet implemented")
+    override fun acceptCall(): Result<Unit> {
+        linphoneManager.acceptCall()
+        return Result.success(Unit)
+    }
+
+    override fun toggleMute(): Result<Unit> {
+        return try {
+            linphoneManager.toggleMicrophone()
+            logEvent("[Audio] Microfone alterado. Mutado:")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            logEvent("[Audio] Erro ao mutar: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    override fun toggleSpeaker(): Result<Boolean> {
+        return try {
+            val isSpeakerOn = linphoneManager.toggleSpeaker()
+            logEvent("[Audio] Saída de áudio alterada. Speaker Ativo: $isSpeakerOn")
+            Result.success(isSpeakerOn)
+        } catch (e: Exception) {
+            logEvent("[Audio] Erro ao alternar speaker: ${e.message}")
+            Result.failure(e)
+        }
     }
 
     override fun muteCall(callId: String): Result<Unit> {
-        TODO("Not yet implemented")
+        return toggleMute().map { }
+    }
+
+    override fun getCallStatusFlow(): Flow<CallStatus> {
+        return linphoneManager.observeCoreCallState().mapNotNull { sdkState ->
+            when (sdkState) {
+                Call.State.OutgoingInit,
+                Call.State.OutgoingProgress -> CallStatus.DIALING
+
+                Call.State.OutgoingRinging -> CallStatus.RINGING
+                Call.State.Connected,
+                Call.State.StreamsRunning -> CallStatus.ACTIVE
+
+                Call.State.IncomingReceived -> CallStatus.INCOMING
+
+                Call.State.End,
+                Call.State.Released,
+                Call.State.Error -> CallStatus.ENDED
+                // Filtra estados que o domínio não liga (Pause, Resuming, etc)
+                else -> null
+            }
+        }
+    }
+
+    override fun getCurrentCallNumber(): String? {
+        return linphoneManager.getCurrentCallNumber()
     }
 
     private fun logEvent(string: String) {
