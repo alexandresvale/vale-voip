@@ -6,7 +6,7 @@ import com.example.data.local.mapper.toDomain
 import com.example.domain.model.AccountModel
 import com.example.domain.repository.AccountRepository
 
-class AccountRepositoryImpl(
+internal class AccountRepositoryImpl(
     private val accountDao: AccountDao
 ) : AccountRepository {
 
