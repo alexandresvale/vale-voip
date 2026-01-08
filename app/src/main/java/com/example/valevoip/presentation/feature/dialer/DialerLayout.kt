@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.valevoip.presentation.feature.dialer.model.KeypadUtil
 import com.example.valevoip.presentation.ui.componet.DialerButton
 import com.example.valevoip.presentation.ui.theme.ValeVoipTheme
 
@@ -83,14 +83,12 @@ fun DialerLayout(
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-
             // O Grid Numérico
             DialerKeypad(
                 modifier = Modifier.weight(1f),
                 onDigitClick = { digit -> onEvent(DialerUiEvent.OnDigitClick(digit)) },
                 onLongClickZero = { onEvent(DialerUiEvent.OnLongClickZero) }
             )
-
             // O Botão de Chamar (Fica na base do teclado)
             Box(
                 modifier = Modifier
@@ -98,7 +96,9 @@ fun DialerLayout(
                     .padding(top = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                CallButton(onClick = { onEvent(DialerUiEvent.OnCallClick) })
+                CallButton(onClick = {
+                    onEvent(DialerUiEvent.OnCallClick)
+                })
             }
         }
     }
@@ -112,52 +112,26 @@ fun DialerKeypad(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.SpaceEvenly // Distribui as linhas igualmente
+        verticalArrangement = Arrangement.SpaceEvenly
     ) {
-        // Linha 1
-        KeypadRow {
-            DialerButton(symbol = "1", subText = "", modifier = Modifier.weight(1f)) { onDigitClick("1") }
-            DialerButton(symbol = "2", subText = "ABC", modifier = Modifier.weight(1f)) { onDigitClick("2") }
-            DialerButton(symbol = "3", subText = "DEF", modifier = Modifier.weight(1f)) { onDigitClick("3") }
-        }
-
-        // Linha 2
-        KeypadRow {
-            DialerButton(symbol = "4", subText = "GHI", modifier = Modifier.weight(1f)) { onDigitClick("4") }
-            DialerButton(symbol = "5", subText = "JKL", modifier = Modifier.weight(1f)) { onDigitClick("5") }
-            DialerButton(symbol = "6", subText = "MNO", modifier = Modifier.weight(1f)) { onDigitClick("6") }
-        }
-
-        // Linha 3
-        KeypadRow {
-            DialerButton(symbol = "7", subText = "PQRS", modifier = Modifier.weight(1f)) { onDigitClick("7") }
-            DialerButton(symbol = "8", subText = "TUV", modifier = Modifier.weight(1f)) { onDigitClick("8") }
-            DialerButton(symbol = "9", subText = "WXYZ", modifier = Modifier.weight(1f)) { onDigitClick("9") }
-        }
-
-        // Linha 4
-        KeypadRow {
-            DialerButton(symbol = "*", subText = "", modifier = Modifier.weight(1f)) { onDigitClick("*") }
-            DialerButton(
-                symbol = "0",
-                subText = "+",
-                modifier = Modifier.weight(1f),
-                onLongClick = onLongClickZero,
-                onClick = { onDigitClick("0") }
-            )
-            DialerButton(symbol = "#", subText = "", modifier = Modifier.weight(1f)) { onDigitClick("#") }
+        KeypadUtil.matrix.forEach { rowKeys ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                rowKeys.forEach { key ->
+                    val longClickAction = if (key.digit == "0") onLongClickZero else null
+                    DialerButton(
+                        symbol = key.digit,
+                        subText = key.letters,
+                        modifier = Modifier.weight(1f),
+                        onLongClick = longClickAction,
+                        onClick = { onDigitClick(key.digit) }
+                    )
+                }
+            }
         }
     }
-}
-
-// Helper simples para evitar repetição de código das Rows
-@Composable
-fun KeypadRow(content: @Composable RowScope.() -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        content = content
-    )
 }
 
 @Composable
@@ -186,7 +160,7 @@ fun CallButton(
         onClick = onClick,
         shape = CircleShape,
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)), // Verde Telefone
-        modifier = modifier.size(64.dp), // Tamanho padrão de FAB
+        modifier = modifier.size(64.dp),
         contentPadding = PaddingValues(0.dp)
     ) {
         Icon(
