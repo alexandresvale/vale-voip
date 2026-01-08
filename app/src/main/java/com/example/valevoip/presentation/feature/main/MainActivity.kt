@@ -19,7 +19,6 @@ import androidx.compose.material3.Surface
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.valevoip.core.extension.requestPermissions
-import com.example.valevoip.core.lib.linphone.LinphoneManagerInternal
 import com.example.valevoip.core.service.CallService
 import com.example.valevoip.navigation.AppNavigation
 import com.example.valevoip.presentation.ui.theme.ValeVoipTheme
@@ -42,8 +41,6 @@ class MainActivity : ComponentActivity() {
         Manifest.permission.CAMERA,
         Manifest.permission.FOREGROUND_SERVICE_PHONE_CALL
     )
-
-    private lateinit var manager: LinphoneManagerInternal
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
