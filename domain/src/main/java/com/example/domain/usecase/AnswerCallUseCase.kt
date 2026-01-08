@@ -3,10 +3,8 @@ package com.example.domain.usecase
 import com.example.domain.repository.ValeVoipService
 import javax.inject.Inject
 
-class MakeCallUseCase @Inject constructor(
+class AnswerCallUseCase @Inject constructor(
     private val valeVoipService: ValeVoipService
 ) {
-    operator fun invoke(number: String): Result<Unit> {
-        return valeVoipService.makeCall(number)
-    }
+    operator fun invoke(): Result<Unit> = valeVoipService.acceptCall()
 }
