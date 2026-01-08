@@ -1,4 +1,4 @@
-package com.example.valevoip.feature.debug
+package com.example.valevoip.presentation.feature.debug
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,9 +21,9 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.valevoip.ui.componet.AlertDialogCompose
-import com.example.valevoip.ui.componet.CircularProgress
-import com.example.valevoip.ui.theme.ValeVoipTheme
+import com.example.valevoip.presentation.ui.componet.AlertDialogCompose
+import com.example.valevoip.presentation.ui.componet.CircularProgress
+import com.example.valevoip.presentation.ui.theme.ValeVoipTheme
 
 @Composable
 fun DebugScreen(
@@ -47,12 +47,7 @@ fun DebugContent(
     name: String,
     version: String,
     openAlertDialog: Boolean = false,
-    onLogin: () -> Unit = {},
-    onLogout: () -> Unit = {},
-    onDelete: () -> Unit = {},
-    onAccept: () -> Unit = {},
-
-    ) {
+) {
     val openAlertDialogState = remember { mutableStateOf(openAlertDialog) }
     val versionState = remember { mutableStateOf(version) }
 
@@ -126,6 +121,16 @@ fun DebugContent(
         )
         {
             Text(text = "Registar Conta")
+        }
+        Button(
+            onClick = { action?.invoke(DebugAction.Call) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .padding(all = 16.dp)
+        )
+        {
+            Text(text = "Fazer ligação")
         }
     }
 

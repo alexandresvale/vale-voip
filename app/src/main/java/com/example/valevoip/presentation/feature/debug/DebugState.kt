@@ -1,4 +1,4 @@
-package com.example.valevoip.feature.debug
+package com.example.valevoip.presentation.feature.debug
 
 data class DebugState(
     val isLoading: Boolean = false,

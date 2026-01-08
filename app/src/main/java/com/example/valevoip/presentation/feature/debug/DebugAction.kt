@@ -1,4 +1,4 @@
-package com.example.valevoip.feature.debug
+package com.example.valevoip.presentation.feature.debug
 
 sealed class DebugAction {
     data object RegisterUser : DebugAction()

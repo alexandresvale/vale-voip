@@ -1,9 +1,11 @@
-package com.example.valevoip.feature.debug
+package com.example.valevoip.presentation.feature.debug
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.usecase.AnswerCallUseCase
 import com.example.domain.usecase.GetAccountUseCase
+import com.example.domain.usecase.MakeCallUseCase
 import com.example.domain.usecase.RegisterUserUseCase
 import com.example.domain.usecase.UnregisterAccountUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,10 +23,9 @@ import javax.inject.Inject
 class DebugViewModel @Inject constructor(
     private val registerUserUseCase: RegisterUserUseCase,
     private val unregisterAccountUseCase: UnregisterAccountUseCase,
-    private val getAccountUseCase: GetAccountUseCase
-//    private val getRegistrationStateUseCase: GetRegistrationStateUseCase,
-//    private val acceptUseCase: AcceptUseCase,
-//    private val getCallStateUseCase: GetCallStateUseCase
+    private val getAccountUseCase: GetAccountUseCase,
+    private val makeCallUseCase: MakeCallUseCase,
+    private val answerCallUseCase: AnswerCallUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DebugState())
@@ -49,7 +50,7 @@ class DebugViewModel @Inject constructor(
 
     private fun registerUser() {
         viewModelScope.launch {
-            registerUserUseCase(userName = "5002", password = "5002", "192.168.100.12")
+            registerUserUseCase(userName = "alexandresvale", password = "asv#251091", "sip2sip.info")
                 .onStart {
                     setState { it.setLoadingState(isLoading = true) }
                     logEvent("onStart")
@@ -97,13 +98,26 @@ class DebugViewModel @Inject constructor(
     }
 
     private fun acceptCall() {
-        /*viewModelScope.launch {
-            acceptUseCase()
-        }*/
+        viewModelScope.launch {
+            answerCallUseCase()
+        }
     }
 
     private fun call() {
-        var callId = "5001"
+        // O UseCase retorna Result<Unit> imediatamente (síncrono)
+        makeCallUseCase("valevoipios")
+            .onSuccess {
+                // O pedido foi aceito pelo Linphone.
+                // IMPORTANTE: Ainda não mudamos para ACTIVE/CONNECTED aqui.
+                // O estado deve mudar apenas quando o Listener do Linphone disser "Connected".
+                // Por enquanto, continuamos em DIALING.
+                Log.d("CallViewModel", "Chamada enviada com sucesso para o core.")
+            }
+            .onFailure { error ->
+                // Falha imediata (ex: sem internet, sem conta)
+                Log.e("CallViewModel", "Erro ao chamar: ${error.message}")
+                // Aqui você poderia emitir um SideEffect para mostrar Toast de erro
+            }
     }
 
     private fun getRegistrationState() {
