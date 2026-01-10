@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.valevoip"
+    namespace = "com.valevoip.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.valevoip"
+        applicationId = "com.valevoip.app"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

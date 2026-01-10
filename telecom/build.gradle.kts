@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.telecom"
+    namespace = "com.valevoip.telecom"
     compileSdk = 34
 
     defaultConfig {

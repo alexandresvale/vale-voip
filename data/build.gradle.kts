@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.data" // Altere para o seu pacote correto
+    namespace = "com.valevoip.data"
     compileSdk = 34
 
     defaultConfig {
