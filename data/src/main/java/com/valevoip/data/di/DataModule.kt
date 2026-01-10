@@ -18,7 +18,7 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun provideVoipService(linphoneManager: LinphoneManager): SipClient {
+    fun provideSipClient(linphoneManager: LinphoneManager): SipClient {
         return SipClientImpl(linphoneManager)
     }
 
