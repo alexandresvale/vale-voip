@@ -1,16 +1,16 @@
 package com.valevoip.domain.usecase
 
-import com.valevoip.domain.repository.ValeVoipService
+import com.valevoip.domain.repository.SipClient
 import javax.inject.Inject
 
 class ToggleMuteUseCase @Inject constructor(
-    private val service: ValeVoipService
+    private val sipClient: SipClient
 ) {
     /**
      * Alterna o estado do microfone.
      * Se estiver ligado, desliga (muta). Se estiver desligado, liga (desmuta).
      */
     operator fun invoke(): Result<Unit> {
-        return service.toggleMute()
+        return sipClient.toggleMute()
     }
 }

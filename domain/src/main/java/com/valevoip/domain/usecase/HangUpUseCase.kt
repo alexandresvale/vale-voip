@@ -1,12 +1,12 @@
 package com.valevoip.domain.usecase
 
-import com.valevoip.domain.repository.ValeVoipService
+import com.valevoip.domain.repository.SipClient
 import javax.inject.Inject
 
 class HangUpUseCase @Inject constructor(
-    private val service: ValeVoipService
+    private val sipClient: SipClient
 ) {
     operator fun invoke(): Result<Unit> {
-        return service.hangUp()
+        return sipClient.hangUp()
     }
 }

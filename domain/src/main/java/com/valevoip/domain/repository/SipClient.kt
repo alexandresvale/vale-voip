@@ -4,7 +4,7 @@ import com.valevoip.domain.model.CallStatus
 import com.valevoip.domain.model.RegistrationStatus
 import kotlinx.coroutines.flow.Flow
 
-interface ValeVoipService {
+interface SipClient {
     suspend fun registerUser(username: String, password: String, domain: String): Flow<RegistrationStatus>
     suspend fun unregister(): Flow<RegistrationStatus>
     fun makeCall(number: String): Result<Unit>

@@ -1,12 +1,12 @@
 package com.valevoip.domain.usecase
 
-import com.valevoip.domain.repository.ValeVoipService
+import com.valevoip.domain.repository.SipClient
 import javax.inject.Inject
 
 class GetCurrentCallNumberUseCase @Inject constructor(
-    private val service: ValeVoipService
+    private val sipClient: SipClient
 ) {
     operator fun invoke(): String {
-        return service.getCurrentCallNumber() ?: "Desconhecido"
+        return sipClient.getCurrentCallNumber() ?: "Desconhecido"
     }
 }

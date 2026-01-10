@@ -4,16 +4,16 @@ import android.util.Log
 import com.valevoip.data.mapper.toDomain
 import com.valevoip.domain.model.CallStatus
 import com.valevoip.domain.model.RegistrationStatus
-import com.valevoip.domain.repository.ValeVoipService
+import com.valevoip.domain.repository.SipClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.transform
 import org.linphone.core.Call
 
-internal class LinphoneService(
+internal class SipClientImpl(
     private val linphoneManager: LinphoneManager
-) : ValeVoipService {
+) : SipClient {
 
     override suspend fun registerUser(
         username: String, password: String, domain: String

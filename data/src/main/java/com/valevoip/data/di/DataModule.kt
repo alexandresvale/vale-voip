@@ -3,9 +3,9 @@ package com.valevoip.data.di
 import com.valevoip.data.local.dao.AccountDao
 import com.valevoip.data.repository.AccountRepositoryImpl
 import com.valevoip.data.service.LinphoneManager
-import com.valevoip.data.service.LinphoneService
+import com.valevoip.data.service.SipClientImpl
 import com.valevoip.domain.repository.AccountRepository
-import com.valevoip.domain.repository.ValeVoipService
+import com.valevoip.domain.repository.SipClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,8 +18,8 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun provideVoipService(linphoneManager: LinphoneManager): ValeVoipService {
-        return LinphoneService(linphoneManager)
+    fun provideVoipService(linphoneManager: LinphoneManager): SipClient {
+        return SipClientImpl(linphoneManager)
     }
 
     @Provides
