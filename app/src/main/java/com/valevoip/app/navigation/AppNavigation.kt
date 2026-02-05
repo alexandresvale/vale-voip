@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,7 +18,7 @@ import com.valevoip.app.presentation.feature.splash.SplashScreen
 
 @Composable
 fun AppNavigation(
-    mainViewModel: MainViewModel = hiltViewModel()
+    mainViewModel: MainViewModel
 ) {
     val navController = rememberNavController()
 
@@ -56,6 +55,8 @@ fun AppNavigation(
             OnboardingScreen(
                 onNavigateToDialer = {
                     navController.navigate(Destinations.Main.route) {
+                        launchSingleTop = true
+                        restoreState = true
                         popUpTo(Destinations.Onboarding.route) { inclusive = true }
                     }
                 }

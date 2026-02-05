@@ -4,6 +4,8 @@ import android.app.Application
 import android.util.Log
 import dagger.hilt.android.HiltAndroidApp
 
+const val VALEVOIP_TAG = "VALEVOIP"
+
 @HiltAndroidApp
 class ValeVoipApplication : Application() {
 

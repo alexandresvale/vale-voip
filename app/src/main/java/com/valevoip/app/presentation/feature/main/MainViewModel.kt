@@ -3,6 +3,7 @@ package com.valevoip.app.presentation.feature.main
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.valevoip.app.VALEVOIP_TAG
 import com.valevoip.domain.model.CallStatus
 import com.valevoip.domain.usecase.GetAccountUseCase
 import com.valevoip.domain.usecase.GetCurrentCallNumberUseCase
@@ -54,13 +55,19 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             observeCallStateUseCase()
                 .collect { status ->
-                    Log.d("####", "monitorIncomingCalls = $status")
+                    Log.d(VALEVOIP_TAG, " MainViewModel monitorIncomingCalls = $status")
                     if (status == CallStatus.INCOMING) {
                         val remoteNumber = getCurrentCallNumberUseCase()
-                        Log.d("MainViewModel", "Recebendo chamada de: $remoteNumber")
+                        Log.d(VALEVOIP_TAG, " MainViewModel Recebendo chamada de: $remoteNumber")
                         _navigationChannel.send(remoteNumber)
                     }
                 }
+        }
+    }
+
+    fun handleNotificationClick(number: String) {
+        viewModelScope.launch {
+            _navigationChannel.send(number)
         }
     }
 }
