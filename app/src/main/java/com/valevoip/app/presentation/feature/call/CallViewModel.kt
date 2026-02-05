@@ -4,8 +4,10 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.valevoip.app.VALEVOIP_TAG
 import com.valevoip.domain.model.CallStatus
 import com.valevoip.domain.usecase.AnswerCallUseCase
+import com.valevoip.domain.usecase.GetCallStatusSyncUseCase
 import com.valevoip.domain.usecase.HangUpUseCase
 import com.valevoip.domain.usecase.MakeCallUseCase
 import com.valevoip.domain.usecase.ObserveCallStateUseCase
@@ -28,7 +30,8 @@ class CallViewModel @Inject constructor(
     private val answerCallUseCase: AnswerCallUseCase,
     private val toggleMuteUseCase: ToggleMuteUseCase,
     private val toggleSpeakerUseCase: ToggleSpeakerUseCase,
-    private val observeCallStateUseCase: ObserveCallStateUseCase
+    private val observeCallStateUseCase: ObserveCallStateUseCase,
+    private val getCallStatusSyncUseCase: GetCallStatusSyncUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CallUiState())
@@ -49,10 +52,10 @@ class CallViewModel @Inject constructor(
         }
         observeCallStatus()
         if (!isIncoming) {
-            Log.d("CallViewModel", "Modo Discagem: Iniciando chamada para $number")
+            logEvent("Modo Discagem: Iniciando chamada para $number")
             startCall(number)
         } else {
-            Log.d("CallViewModel", "Modo Recebimento: Apenas observando chamada de $number")
+            logEvent("Modo Recebimento: Apenas observando chamada de $number")
         }
     }
 
@@ -74,10 +77,10 @@ class CallViewModel @Inject constructor(
         }
         makeCallUseCase(number)
             .onSuccess {
-                Log.d("CallViewModel", "Chamada enviada com sucesso para o core.")
+                logEvent("Chamada enviada com sucesso para o core.")
             }
             .onFailure { error ->
-                Log.e("CallViewModel", "Erro ao chamar: ${error.message}")
+                logEvent("Erro ao chamar: ${error.message}")
                 _uiState.update {
                     it.copy(callStatus = CallStatus.ENDED)
                 }
@@ -89,11 +92,11 @@ class CallViewModel @Inject constructor(
         stopTimer()
         hangUpUseCase()
             .onSuccess {
-                Log.d("CallViewModel", "Comando de desligar enviado com sucesso.")
+                logEvent("Comando de desligar enviado com sucesso.")
                 _uiState.update { it.copy(callStatus = CallStatus.ENDED) }
             }
             .onFailure { e ->
-                Log.e("CallViewModel", "Falha ao enviar comando de desligar: ${e.message}")
+                logEvent("Falha ao enviar comando de desligar: ${e.message}")
                 _uiState.update { it.copy(callStatus = CallStatus.ENDED) }
             }
     }
@@ -101,10 +104,10 @@ class CallViewModel @Inject constructor(
     private fun performAnswer() {
         answerCallUseCase()
             .onSuccess {
-                Log.d("CallViewModel", "Comando de atender enviado.")
+                logEvent("Comando de atender enviado.")
             }
             .onFailure { e ->
-                Log.e("CallViewModel", "Falha ao atender: ${e.message}")
+                logEvent("Falha ao atender: ${e.message}")
             }
     }
 
@@ -113,10 +116,10 @@ class CallViewModel @Inject constructor(
         _uiState.update { it.copy(isMuted = newMuteState) }
         toggleMuteUseCase()
             .onSuccess {
-                Log.d("CallViewModel", "Mute alterado com sucesso para: $newMuteState")
+                logEvent("Mute alterado com sucesso para: $newMuteState")
             }
             .onFailure {
-                Log.e("CallViewModel", "Falha ao alterar mute.")
+                logEvent("Falha ao alterar mute.")
             }
     }
 
@@ -125,10 +128,10 @@ class CallViewModel @Inject constructor(
         _uiState.update { it.copy(isSpeakerOn = newSpeakerState) }
         toggleSpeakerUseCase()
             .onSuccess {
-                Log.d("CallViewModel", "Viva-voz alterado para: $newSpeakerState")
+                logEvent("Viva-voz alterado para: $newSpeakerState")
             }
             .onFailure {
-                Log.e("CallViewModel", "Falha ao mudar viva-voz")
+                logEvent("Falha ao mudar viva-voz")
                 // 3. Rollback: Se falhou, desfaz a mudança visual
                 _uiState.update { it.copy(isSpeakerOn = !newSpeakerState) }
             }
@@ -139,7 +142,7 @@ class CallViewModel @Inject constructor(
         if (timerJob?.isActive == true) return
 
         timerJob = viewModelScope.launch {
-            Log.d("CallViewModel", "Timer iniciado")
+            logEvent("Timer iniciado")
             while (true) {
                 delay(1000)
                 _uiState.update { state ->
@@ -168,7 +171,7 @@ class CallViewModel @Inject constructor(
         viewModelScope.launch {
             observeCallStateUseCase()
                 .collect { newStatus ->
-                    Log.d("CallViewModel", "Abrindo tela para chamada existente. Status: $newStatus")
+                    logEvent("Abrindo tela para chamada existente. Status: $newStatus")
                     _uiState.update { it.copy(callStatus = newStatus) }
                     when (newStatus) {
                         CallStatus.INCOMING -> {}
@@ -178,5 +181,9 @@ class CallViewModel @Inject constructor(
                     }
                 }
         }
+    }
+
+    private fun logEvent(string: String) {
+        Log.d(VALEVOIP_TAG, "CallViewModel | $string")
     }
 }

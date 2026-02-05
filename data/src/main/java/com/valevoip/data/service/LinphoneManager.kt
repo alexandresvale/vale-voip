@@ -193,8 +193,18 @@ class LinphoneManager @Inject constructor(
                 trySend(state).isSuccess
             }
         }
-
         core.addListener(listener)
+
+        val currentCall = core.currentCall ?: core.calls.firstOrNull()
+
+        if (currentCall != null) {
+            // Se tem chamada ativa, envia o estado dela (ex: StreamsRunning)
+            Log.d("LinphoneManager", "Emitindo estado inicial: ${currentCall.state}")
+            trySend(currentCall.state)
+        } else {
+            // Se não tem chamada, envia Idle
+            trySend(Call.State.Idle)
+        }
         awaitClose {
             Log.d("LinphoneManager", "Flow observeCallState cancelado")
             core.removeListener(listener)
