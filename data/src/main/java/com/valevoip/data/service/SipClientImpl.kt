@@ -5,14 +5,22 @@ import com.valevoip.data.mapper.toDomain
 import com.valevoip.domain.model.CallStatus
 import com.valevoip.domain.model.RegistrationStatus
 import com.valevoip.domain.repository.SipClient
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.transform
 import org.linphone.core.Call
 
 internal class SipClientImpl(
-    private val linphoneManager: LinphoneManager
+    private val linphoneManager: LinphoneManager,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : SipClient {
 
     override suspend fun registerUser(
@@ -123,28 +131,48 @@ internal class SipClientImpl(
     }
 
     override fun getCallStatusFlow(): Flow<CallStatus> {
+        /**
+         * Verificar a utilização com CoroutineScope e shareIn. talvez esteja muito redundante.
+         */
+        val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+            Log.d("SipClient", "Erro Crítico no Scope: ${throwable.message}")
+        }
+        val clientScope = CoroutineScope(SupervisorJob() + dispatcher + exceptionHandler)
+
         return linphoneManager.observeCoreCallState().mapNotNull { sdkState ->
             when (sdkState) {
                 Call.State.OutgoingInit,
                 Call.State.OutgoingProgress -> CallStatus.DIALING
 
                 Call.State.OutgoingRinging -> CallStatus.RINGING
-                Call.State.Connected,
-                Call.State.StreamsRunning -> CallStatus.ACTIVE
 
-                Call.State.IncomingReceived -> CallStatus.INCOMING
+                Call.State.Connected,
+                Call.State.StreamsRunning,
+                Call.State.UpdatedByRemote -> CallStatus.ACTIVE
+
+                Call.State.IncomingReceived,
+                Call.State.IncomingEarlyMedia -> CallStatus.INCOMING
 
                 Call.State.End,
                 Call.State.Released,
                 Call.State.Error -> CallStatus.ENDED
+
+                Call.State.Idle -> CallStatus.IDLE
                 // Filtra estados que o domínio não liga (Pause, Resuming, etc)
                 else -> null
             }
-        }
+        }.catch {
+            Log.d("SipClient", "Erro no fluxo do Linphone: ${it.message}")
+            emit(CallStatus.ENDED)
+        }.flowOn(dispatcher)
     }
 
     override fun getCurrentCallNumber(): String? {
         return linphoneManager.getCurrentCallNumber()
+    }
+
+    override fun getSynchronousCallStatus(): CallStatus {
+        TODO("Not yet implemented")
     }
 
     private fun logEvent(string: String) {

@@ -15,4 +15,5 @@ interface SipClient {
     fun acceptCall(): Result<Unit>
     fun getCallStatusFlow(): Flow<CallStatus>
     fun getCurrentCallNumber(): String?
+    fun getSynchronousCallStatus(): CallStatus
 }
