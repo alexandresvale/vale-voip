@@ -1,4 +1,4 @@
-package com.valevoip.app.presentation.feature.splash
+package com.valevoip.feature.splash
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,14 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.valevoip.app.R
-import com.valevoip.app.presentation.ui.theme.onPrimaryLight
-import com.valevoip.app.presentation.ui.theme.primaryLight
-import com.valevoip.app.presentation.ui.util.SystemBarsController
+import com.valevoip.core.designsystem.R
+import com.valevoip.core.designsystem.theme.onPrimaryLight
+import com.valevoip.core.designsystem.theme.primaryLight
 
 @Composable
-fun SplashLayout() {
-    SystemBarsController(useDarkIcons = false)
+internal fun SplashLayout() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,7 +44,7 @@ fun SplashLayout() {
     }
 }
 
-@Preview(showSystemUi = true, apiLevel = 36)
+@Preview(showBackground = true)
 @Composable
 fun SplashLayoutPreview() {
     SplashLayout()
