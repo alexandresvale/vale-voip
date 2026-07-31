@@ -1,5 +1,6 @@
-package com.valevoip.app.presentation.feature.onboarding
+package com.valevoip.feature.login
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -14,24 +15,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.valevoip.core.designsystem.util.SystemBarsController
 
 
 @Composable
-fun OnboardingScreen(
+internal fun LoginScreen(
     onNavigateToDialer: () -> Unit,
-    viewModel: OnboardingViewModel = hiltViewModel()
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackBarHostState = remember { SnackbarHostState() }
 
+    SystemBarsController(useDarkIcons = !isSystemInDarkTheme())
+
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is OnboardingEffect.NavigateToDialer -> {
+                is LoginEffect.NavigateToDialer -> {
                     onNavigateToDialer()
                 }
 
-                is OnboardingEffect.ShowErrorSnackBar -> {
+                is LoginEffect.ShowErrorSnackBar -> {
                     snackBarHostState.showSnackbar(
                         message = effect.message,
                         actionLabel = "OK",
@@ -56,8 +60,8 @@ fun OnboardingScreen(
             }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { paddingValues ->
-        OnboardingLayout(
+    ) {
+        LoginLayout(
             uiState = uiState,
             onEvent = viewModel::onEvent
         )
@@ -66,8 +70,8 @@ fun OnboardingScreen(
 
 @Preview(showSystemUi = true)
 @Composable
-fun OnboardingScreenPreview() {
-    OnboardingScreen(
+private fun LoginScreenPreview() {
+    LoginScreen(
         onNavigateToDialer = {}
     )
 }

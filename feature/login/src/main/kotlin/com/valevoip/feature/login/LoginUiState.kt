@@ -1,6 +1,6 @@
-package com.valevoip.app.presentation.feature.onboarding
+package com.valevoip.feature.login
 
-data class OnboardingUiState(
+internal data class LoginUiState(
     val isLoading: Boolean = false,
     val userName: String = "",
     val userNameError: String? = null,
