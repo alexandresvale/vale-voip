@@ -1,6 +1,6 @@
-package com.valevoip.app.presentation.feature.dialer
+package com.valevoip.feature.dialer
 
-sealed interface DialerUiEvent {
+internal sealed interface DialerUiEvent {
     data class OnDigitClick(val digit: String) : DialerUiEvent
     object OnBackspace : DialerUiEvent
     object OnLongClickZero : DialerUiEvent

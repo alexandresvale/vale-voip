@@ -1,4 +1,4 @@
-package com.valevoip.app.presentation.feature.dialer
+package com.valevoip.feature.dialer
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
@@ -8,10 +8,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.valevoip.app.presentation.ui.theme.ValeVoipTheme
+import com.valevoip.core.designsystem.theme.ValeVoipTheme
 
 @Composable
-fun DialerScreen(
+internal fun DialerScreen(
     viewModel: DialerViewModel = hiltViewModel(),
     onNavigateToCall: (String) -> Unit
 ) {
@@ -40,7 +40,7 @@ fun DialerScreen(
 
 @Preview
 @Composable
-fun DialerScreenPreview() {
+internal fun DialerScreenPreview() {
     ValeVoipTheme(darkTheme = false) {
         DialerScreen(
             onNavigateToCall = {}

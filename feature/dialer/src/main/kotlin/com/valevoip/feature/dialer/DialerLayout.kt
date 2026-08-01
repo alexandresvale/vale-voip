@@ -1,4 +1,4 @@
-package com.valevoip.app.presentation.feature.dialer
+package com.valevoip.feature.dialer
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -27,13 +27,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.valevoip.app.presentation.feature.dialer.model.KeypadUtil
-import com.valevoip.app.presentation.ui.componet.DialerButton
-import com.valevoip.app.presentation.ui.theme.ValeVoipTheme
+import com.valevoip.feature.dialer.model.KeypadUtil
+import com.valevoip.core.designsystem.component.DialerButton
+import com.valevoip.core.designsystem.theme.ValeVoipTheme
 
 
 @Composable
-fun DialerLayout(
+internal fun DialerLayout(
     uiState: DialerUiState,
     onEvent: (DialerUiEvent) -> Unit,
 ) {
@@ -174,7 +174,7 @@ fun CallButton(
 
 @Preview
 @Composable
-fun DialerLayoutPreview() {
+internal fun DialerLayoutPreview() {
     ValeVoipTheme(darkTheme = false) {
         DialerLayout(
             uiState = DialerUiState(),

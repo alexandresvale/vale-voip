@@ -1,4 +1,4 @@
-package com.valevoip.app.presentation.feature.dialer.model
+package com.valevoip.feature.dialer.model
 
 data class KeypadKey(
     val digit: String,

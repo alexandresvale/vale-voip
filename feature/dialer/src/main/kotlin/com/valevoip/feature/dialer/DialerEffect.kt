@@ -1,4 +1,4 @@
-package com.valevoip.app.presentation.feature.dialer
+package com.valevoip.feature.dialer
 
 sealed interface DialerEffect {
     data class NavigateToCall(val number: String) : DialerEffect
