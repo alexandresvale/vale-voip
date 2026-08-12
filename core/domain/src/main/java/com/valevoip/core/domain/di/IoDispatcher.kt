@@ -1,4 +1,4 @@
-package com.valevoip.domain.di
+package com.valevoip.core.domain.di
 
 import javax.inject.Qualifier
 

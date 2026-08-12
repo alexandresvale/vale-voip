@@ -1,9 +1,9 @@
-package com.valevoip.domain.usecase
+package com.valevoip.core.domain.usecase
 
-import com.valevoip.domain.di.IoDispatcher
-import com.valevoip.domain.model.RegistrationStatus
-import com.valevoip.domain.repository.AccountRepository
-import com.valevoip.domain.repository.SipClient
+import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.di.IoDispatcher
+import com.valevoip.core.domain.model.SipRegistrationState
+import com.valevoip.core.domain.repository.AccountRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -15,9 +15,9 @@ class UnregisterAccountUseCase @Inject constructor(
     private val repository: AccountRepository,
     @IoDispatcher private val dispatcher: CoroutineDispatcher
 ) {
-    suspend operator fun invoke(): Flow<RegistrationStatus> {
+    suspend operator fun invoke(): Flow<SipRegistrationState> {
         return sipClient.unregister().onEach {
-            if (it == RegistrationStatus.Cleared) {
+            if (it == SipRegistrationState.Ok) {
                 repository.clearAccount()
             }
         }.flowOn(dispatcher)

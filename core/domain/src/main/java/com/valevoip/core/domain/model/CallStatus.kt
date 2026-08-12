@@ -1,4 +1,4 @@
-package com.valevoip.domain.model
+package com.valevoip.core.domain.model
 
 enum class CallStatus {
     IDLE,

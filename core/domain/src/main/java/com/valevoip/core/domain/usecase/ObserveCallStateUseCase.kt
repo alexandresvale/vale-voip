@@ -1,7 +1,7 @@
-package com.valevoip.domain.usecase
+package com.valevoip.core.domain.usecase
 
-import com.valevoip.domain.model.CallStatus
-import com.valevoip.domain.repository.SipClient
+import com.valevoip.core.domain.model.CallStatus
+import com.valevoip.core.domain.client.SipClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import javax.inject.Inject
