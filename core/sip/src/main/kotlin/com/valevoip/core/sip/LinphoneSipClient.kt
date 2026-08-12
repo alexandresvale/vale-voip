@@ -6,6 +6,9 @@ import android.media.AudioManager
 import android.os.Build
 import android.util.Log
 import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.model.CallDirection
+import com.valevoip.core.domain.model.CallHistoryItem
+import com.valevoip.core.domain.model.CallHistoryStatus
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
@@ -263,4 +266,45 @@ internal class LinphoneSipClient(
     }
 
     override fun getSynchronousCallStatus(): CallStatus = _callStatus.value
+
+    override fun getCallLogs(): Result<List<CallHistoryItem>> {
+        return try {
+            val logs = linphoneCore?.callLogs ?: return Result.success(emptyList())
+            val mapped = logs.map { log ->
+                val direction = when (log.dir) {
+                    org.linphone.core.Call.Dir.Incoming -> CallDirection.INCOMING
+                    else -> CallDirection.OUTGOING
+                }
+
+                val status = when (log.status) {
+                    org.linphone.core.Call.Status.Missed -> CallHistoryStatus.MISSED
+                    org.linphone.core.Call.Status.Declined,
+                    org.linphone.core.Call.Status.Aborted -> CallHistoryStatus.DECLINED
+                    else -> CallHistoryStatus.SUCCESS
+                }
+
+                CallHistoryItem(
+                    id = log.callId ?: "",
+                    remoteAddress = log.remoteAddress?.username ?: "Desconhecido",
+                    displayName = log.remoteAddress?.displayName,
+                    direction = direction,
+                    status = status,
+                    timestamp = log.startDate * 1000L,
+                    durationSeconds = log.duration
+                )
+            }.sortedByDescending { it.timestamp }
+            Result.success(mapped)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun clearCallLogs(): Result<Unit> {
+        return try {
+            linphoneCore?.clearCallLogs()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
