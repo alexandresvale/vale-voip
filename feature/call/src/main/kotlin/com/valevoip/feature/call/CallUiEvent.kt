@@ -1,6 +1,7 @@
-package com.valevoip.app.presentation.feature.call
+package com.valevoip.feature.call
 
-sealed interface CallUiEvent {
+internal sealed interface CallUiEvent {
+    object OnPermissionGranted : CallUiEvent
     object OnToggleMute : CallUiEvent
     object OnToggleSpeaker : CallUiEvent
     object OnShowKeypad : CallUiEvent

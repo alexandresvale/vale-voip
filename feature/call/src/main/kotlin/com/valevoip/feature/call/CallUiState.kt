@@ -1,8 +1,8 @@
-package com.valevoip.app.presentation.feature.call
+package com.valevoip.feature.call
 
-import com.valevoip.domain.model.CallStatus
+import com.valevoip.core.domain.model.CallStatus
 
-data class CallUiState(
+internal data class CallUiState(
     val contactName: String = "Desconhecido",
     val contactNumber: String = "",
     val callStatus: CallStatus = CallStatus.IDLE,

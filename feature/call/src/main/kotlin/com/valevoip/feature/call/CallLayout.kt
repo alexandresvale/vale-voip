@@ -1,5 +1,6 @@
-package com.valevoip.app.presentation.feature.call
+package com.valevoip.feature.call
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,11 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Dialpad
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,22 +29,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import com.valevoip.domain.model.CallStatus
-import com.valevoip.app.presentation.ui.componet.CallActionButton
-import com.valevoip.app.presentation.ui.theme.ValeVoipTheme
-import com.valevoip.app.presentation.ui.theme.primaryLight
+import com.valevoip.core.designsystem.component.ValeVoipCallButton
+import com.valevoip.core.designsystem.component.ValeVoipCallButtonType
+import com.valevoip.core.designsystem.theme.ValeVoipTheme
+import com.valevoip.core.domain.model.CallStatus
 
 @Composable
-fun CallLayout(
+internal fun CallLayout(
     state: CallUiState,
     onEvent: (CallUiEvent) -> Unit
 ) {
-    Scaffold(containerColor = Color.White) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -65,7 +66,7 @@ fun CallLayout(
             Text(
                 text = statusText,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (state.callStatus == CallStatus.INCOMING) MaterialTheme.colorScheme.primary else Color.Gray
+                color = if (state.callStatus == CallStatus.INCOMING) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.weight(0.1f))
@@ -75,20 +76,28 @@ fun CallLayout(
                 modifier = Modifier
                     .size(160.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFF0F0F0)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = null,
                     modifier = Modifier.size(80.dp),
-                    tint = Color.Gray
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Text(text = state.contactName, style = MaterialTheme.typography.headlineMedium)
-            Text(text = state.contactNumber, style = MaterialTheme.typography.titleLarge, color = Color.Gray)
+            Text(
+                text = state.contactName,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                text = state.contactNumber,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Spacer(modifier = Modifier.weight(0.3f))
 
@@ -105,7 +114,7 @@ fun CallLayout(
 }
 
 @Composable
-fun IncomingCallControls(onEvent: (CallUiEvent) -> Unit) {
+private fun IncomingCallControls(onEvent: (CallUiEvent) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -113,20 +122,18 @@ fun IncomingCallControls(onEvent: (CallUiEvent) -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CallActionButton(
+        ValeVoipCallButton(
             icon = Icons.Default.CallEnd,
-            iconColor = Color.White,
-            iconBackground = Color(0xFFD32F2F),
             contentDescription = "Rejeitar",
+            buttonType = ValeVoipCallButtonType.DESTRUCTIVE,
             modifier = Modifier.size(72.dp),
             onClick = { onEvent(CallUiEvent.OnHangup) }
         )
 
-        CallActionButton(
+        ValeVoipCallButton(
             icon = Icons.Default.Call,
-            iconColor = Color.White,
-            iconBackground = Color(0xFF2E7D32),
             contentDescription = "Atender",
+            buttonType = ValeVoipCallButtonType.ACCEPT,
             modifier = Modifier.size(72.dp),
             onClick = { onEvent(CallUiEvent.OnAnswer) }
         )
@@ -134,34 +141,31 @@ fun IncomingCallControls(onEvent: (CallUiEvent) -> Unit) {
 }
 
 @Composable
-fun ActiveCallControls(state: CallUiState, onEvent: (CallUiEvent) -> Unit) {
+private fun ActiveCallControls(state: CallUiState, onEvent: (CallUiEvent) -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         if (state.callStatus == CallStatus.ACTIVE) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                CallActionButton(
+                ValeVoipCallButton(
                     icon = Icons.Default.Dialpad,
-                    iconColor = Color.White,
-                    iconBackground = primaryLight,
                     label = "Teclado",
+                    buttonType = ValeVoipCallButtonType.DEFAULT,
                     onClick = { onEvent(CallUiEvent.OnShowKeypad) }
                 )
-                CallActionButton(
-                    icon = if (state.isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                    iconColor = Color.White,
-                    iconBackground = primaryLight,
+                ValeVoipCallButton(
+                    icon = if (state.isMuted) Icons.Default.MicOff else Icons.Default.Mic,
                     label = "Mudo",
                     isActive = state.isMuted,
+                    buttonType = ValeVoipCallButtonType.TOGGLE,
                     onClick = { onEvent(CallUiEvent.OnToggleMute) }
                 )
-                CallActionButton(
+                ValeVoipCallButton(
                     icon = Icons.AutoMirrored.Default.VolumeUp,
-                    iconColor = Color.White,
-                    iconBackground = primaryLight,
                     label = "Viva-voz",
                     isActive = state.isSpeakerOn,
+                    buttonType = ValeVoipCallButtonType.TOGGLE,
                     onClick = { onEvent(CallUiEvent.OnToggleSpeaker) }
                 )
             }
@@ -169,18 +173,17 @@ fun ActiveCallControls(state: CallUiState, onEvent: (CallUiEvent) -> Unit) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        CallActionButton(
+        ValeVoipCallButton(
             icon = Icons.Default.CallEnd,
-            iconColor = Color.White,
-            iconBackground = Color(0xFFD32F2F),
             contentDescription = "Desligar",
+            buttonType = ValeVoipCallButtonType.DESTRUCTIVE,
             modifier = Modifier.size(72.dp),
             onClick = { onEvent(CallUiEvent.OnHangup) }
         )
     }
 }
 
-class CallStateProvider : PreviewParameterProvider<CallUiState> {
+private class CallStateProvider : PreviewParameterProvider<CallUiState> {
     override val values = sequenceOf(
         // Caso 1: Chamada Efetuada (Discando)
         CallUiState(
@@ -205,9 +208,16 @@ class CallStateProvider : PreviewParameterProvider<CallUiState> {
     )
 }
 
-@Preview(showBackground = true, widthDp = 360, heightDp = 640)
+@Preview(showBackground = true, widthDp = 360, heightDp = 640, name = "Light Mode")
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 640,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Mode"
+)
 @Composable
-fun CallLayoutPreview(
+private fun CallLayoutPreview(
     @PreviewParameter(CallStateProvider::class) state: CallUiState
 ) {
     ValeVoipTheme {

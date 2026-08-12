@@ -1,18 +1,17 @@
-package com.valevoip.app.presentation.feature.call
+package com.valevoip.feature.call
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.valevoip.app.VALEVOIP_TAG
-import com.valevoip.domain.model.CallStatus
-import com.valevoip.domain.usecase.AnswerCallUseCase
-import com.valevoip.domain.usecase.GetCallStatusSyncUseCase
-import com.valevoip.domain.usecase.HangUpUseCase
-import com.valevoip.domain.usecase.MakeCallUseCase
-import com.valevoip.domain.usecase.ObserveCallStateUseCase
-import com.valevoip.domain.usecase.ToggleMuteUseCase
-import com.valevoip.domain.usecase.ToggleSpeakerUseCase
+import com.valevoip.core.domain.model.CallStatus
+import com.valevoip.core.domain.usecase.AnswerCallUseCase
+import com.valevoip.core.domain.usecase.GetCallStatusSyncUseCase
+import com.valevoip.core.domain.usecase.HangUpUseCase
+import com.valevoip.core.domain.usecase.MakeCallUseCase
+import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
+import com.valevoip.core.domain.usecase.ToggleMuteUseCase
+import com.valevoip.core.domain.usecase.ToggleSpeakerUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,8 +22,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CallViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+internal class CallViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val makeCallUseCase: MakeCallUseCase,
     private val hangUpUseCase: HangUpUseCase,
     private val answerCallUseCase: AnswerCallUseCase,
@@ -38,29 +37,15 @@ class CallViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+    private var hasInitiatedCall = false
 
     init {
-        val number = savedStateHandle.get<String>("number") ?: ""
-        val isIncoming = savedStateHandle.get<Boolean>("isIncoming") ?: false
-
-        val initialStatus = if (isIncoming) CallStatus.INCOMING else CallStatus.DIALING
-        _uiState.update {
-            it.copy(
-                contactNumber = number,
-                callStatus = initialStatus
-            )
-        }
         observeCallStatus()
-        if (!isIncoming) {
-            logEvent("Modo Discagem: Iniciando chamada para $number")
-            startCall(number)
-        } else {
-            logEvent("Modo Recebimento: Apenas observando chamada de $number")
-        }
     }
 
     fun onEvent(event: CallUiEvent) {
         when (event) {
+            CallUiEvent.OnPermissionGranted -> handleCallInitialization()
             CallUiEvent.OnHangup -> performHangup()
             CallUiEvent.OnToggleMute -> performToggleMute()
             CallUiEvent.OnToggleSpeaker -> performToggleSpeaker()
@@ -69,7 +54,20 @@ class CallViewModel @Inject constructor(
         }
     }
 
+    private fun handleCallInitialization() {
+        logEvent("Iniciando avaliação de chamada (handleCallInitialization)")
+        val number = savedStateHandle.get<String>("number")
+        if (!number.isNullOrBlank() && !hasInitiatedCall) {
+            hasInitiatedCall = true
+            _uiState.update { it.copy(contactNumber = number) }
+            startCall(number)
+        } else if (number.isNullOrBlank()) {
+            logEvent("Modo Recebimento detectado (Número vazio na rota). Aguardando Linphone enviar os dados.")
+        }
+    }
+
     private fun startCall(number: String) {
+        logEvent("startCall - $number")
         val number = when (number) {
             "2525" -> "valevoipios"
             "5555" -> "alexandreskt16"
@@ -88,15 +86,14 @@ class CallViewModel @Inject constructor(
     }
 
     private fun performHangup() {
-        _uiState.update { it.copy(callStatus = CallStatus.ENDED) }
-        stopTimer()
+        logEvent("Botão de desligar pressionado. Solicitando ao core...")
         hangUpUseCase()
             .onSuccess {
-                logEvent("Comando de desligar enviado com sucesso.")
-                _uiState.update { it.copy(callStatus = CallStatus.ENDED) }
+                logEvent("Comando de desligar aceito pelo SIP. Aguardando evento de término...")
             }
             .onFailure { e ->
-                logEvent("Falha ao enviar comando de desligar: ${e.message}")
+                logEvent("Falha crítica ao desligar: ${e.message}. Forçando encerramento da tela.")
+                // Se falhar em se comunicar com o C++, forçamos o fim para não travar o app
                 _uiState.update { it.copy(callStatus = CallStatus.ENDED) }
             }
     }
@@ -120,6 +117,7 @@ class CallViewModel @Inject constructor(
             }
             .onFailure {
                 logEvent("Falha ao alterar mute.")
+                _uiState.update { it.copy(isMuted = !newMuteState) }
             }
     }
 
@@ -184,6 +182,6 @@ class CallViewModel @Inject constructor(
     }
 
     private fun logEvent(string: String) {
-        Log.d(VALEVOIP_TAG, "CallViewModel | $string")
+        Log.d("VALEVOIP_TAG", "CallViewModel | $string")
     }
 }
