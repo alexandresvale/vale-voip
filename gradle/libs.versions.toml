@@ -1,5 +1,5 @@
 [versions]
-agp = "8.5.2"
+agp = "8.8.0"
 ksp = "2.1.0-1.0.29"
 kotlin = "2.1.0"
 kotlinx-coroutines = "1.10.1"
@@ -28,8 +28,18 @@ runtime-livedata = "1.6.8"
 ui-text-google-fonts = "1.7.8"
 jetbrains-kotlin-jvm = "2.1.0"
 javaxInject = "1"
+# Linphone Version 5.5.13
+linphone  =  "5.5.13"
 
 [libraries]
+
+# Plugins (usados dentro do build-logic)
+android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
+kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+compose-gradlePlugin = { group = "org.jetbrains.kotlin", name = "compose-compiler-gradle-plugin", version.ref = "kotlin" }
+hilt-gradlePlugin = { group = "com.google.dagger", name = "hilt-android-gradle-plugin", version.ref = "hilt-android" }
+
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version = "1.0.1" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -53,8 +63,8 @@ material = { group = "com.google.android.material", name = "material", version.r
 androidx-legacy-support-v4 = { group = "androidx.legacy", name = "legacy-support-v4", version.ref = "legacy-support-v4" }
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragment-ktx" }
 # Linphone
-linphone-android-release = { group = "org.linphone", name = "linphone-sdk-android", version = "5.3.48" }
-linphone-android-debug = { group = "org.linphone", name = "linphone-sdk-android-debug", version = "5.3.48" }
+linphone-release = { group = "org.linphone", name = "linphone-sdk-android", version.ref = "linphone" }
+linphone-debug = { group = "org.linphone", name = "linphone-sdk-android-debug", version.ref = "linphone" }
 media = { group = "androidx.media", name = "media", version = "1.7.0" }
 
 #Corountines
@@ -75,6 +85,7 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room-version" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room-version" }
 androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtime-livedata" }
+
 androidx-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text-google-fonts", version.ref = "ui-text-google-fonts" }
 
 # Android Runner

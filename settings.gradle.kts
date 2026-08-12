@@ -1,5 +1,7 @@
 @file:Suppress("UnstableApiUsage")
+
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google()
         mavenCentral()
@@ -16,10 +18,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io")  }
+        maven { url = uri("https://jitpack.io") }
         maven {
             name = "linphone.org maven repository"
-            url = uri("https://linphone.org/maven_repository/")
+            url = uri("https://download.linphone.org/maven_repository")
             content {
                 includeGroup("org.linphone")
             }
@@ -29,7 +31,14 @@ dependencyResolutionManagement {
 
 rootProject.name = "Vale VoIP"
 include(":app")
-include(":telecom")
-include(":pjsua2")
-include(":domain")
-include(":data")
+include(":feature:dialer")
+include(":feature:call")
+include(":feature:splash")
+include(":feature:login")
+include(":feature:home")
+include(":feature:history")
+include(":core:domain")
+include(":core:data")
+include(":core:telecom")
+include(":core:sip")
+include(":core:designsystem")
