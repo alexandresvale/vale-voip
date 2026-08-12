@@ -20,8 +20,8 @@ import com.valevoip.core.designsystem.util.SystemBarsController
 
 @Composable
 internal fun LoginScreen(
-    onNavigateToDialer: () -> Unit,
-    viewModel: LoginViewModel = hiltViewModel()
+    viewModel: LoginViewModel = hiltViewModel(),
+    onNavigateToDialer: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackBarHostState = remember { SnackbarHostState() }
