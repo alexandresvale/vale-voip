@@ -1,38 +1,30 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("valevoip.android.library")
     alias(libs.plugins.devtools.ksp)
     alias(libs.plugins.hilt.android)
 //    alias(libs.plugins.jetbrains.kotlin.jvm)
 }
 
 android {
-    namespace = "com.valevoip.data"
-    compileSdk = 34
+    namespace = "com.valevoip.core.data"
 
-    defaultConfig {
-        minSdk = 24
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    compileOptions {
+    /*compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
-    }
+    }*/
 }
 
 dependencies {
-    implementation(project(":domain"))
+    implementation(project(":core:domain"))
     implementation(libs.kotlinx.coroutines.core)
 
     // Linphone SDK
-    debugImplementation(libs.linphone.android.debug)
-    releaseImplementation(libs.linphone.android.release)
+//    debugImplementation(libs.linphone.debug)
+    implementation(libs.linphone.release)
     implementation(libs.media)
 
     // Android Room
