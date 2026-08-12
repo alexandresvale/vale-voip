@@ -1,4 +1,4 @@
-package com.valevoip.app.presentation.ui.util
+package com.valevoip.core.designsystem.util
 
 import android.app.Activity
 import androidx.compose.runtime.Composable

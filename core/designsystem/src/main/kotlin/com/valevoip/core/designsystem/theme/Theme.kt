@@ -1,4 +1,4 @@
-package com.valevoip.app.presentation.ui.theme
+package com.valevoip.core.designsystem.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -256,7 +256,7 @@ val unspecified_scheme = ColorFamily(
 fun ValeVoipTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable() () -> Unit
 ) {
     val colorScheme = when {

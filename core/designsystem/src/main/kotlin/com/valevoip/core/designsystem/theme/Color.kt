@@ -1,4 +1,4 @@
-package com.valevoip.app.presentation.ui.theme
+package com.valevoip.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 
@@ -110,8 +110,8 @@ val surfaceContainerLightHighContrast = Color(0xFFE1E2E8)
 val surfaceContainerHighLightHighContrast = Color(0xFFD3D4DA)
 val surfaceContainerHighestLightHighContrast = Color(0xFFC5C6CC)
 
-val primaryDark = Color(0xFFA1C9FD)
-val onPrimaryDark = Color(0xFF00325A)
+val primaryDark = Color(0xFF1976D2) // Azul forte e vivo para o Dark Mode
+val onPrimaryDark = Color(0xFFFFFFFF)
 val primaryContainerDark = Color(0xFF1B4975)
 val onPrimaryContainerDark = Color(0xFFD2E4FF)
 val secondaryDark = Color(0xFF92CEF5)
@@ -122,8 +122,8 @@ val tertiaryDark = Color(0xFF87D1EB)
 val onTertiaryDark = Color(0xFF003543)
 val tertiaryContainerDark = Color(0xFF004E60)
 val onTertiaryContainerDark = Color(0xFFB6EBFF)
-val errorDark = Color(0xFFFFB4AB)
-val onErrorDark = Color(0xFF690005)
+val errorDark = Color(0xFFE53935) // Vermelho forte (Destructive)
+val onErrorDark = Color(0xFFFFFFFF)
 val errorContainerDark = Color(0xFF93000A)
 val onErrorContainerDark = Color(0xFFFFDAD6)
 val backgroundDark = Color(0xFF111418)

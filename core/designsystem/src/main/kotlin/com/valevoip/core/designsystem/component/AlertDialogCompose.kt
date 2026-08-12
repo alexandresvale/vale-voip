@@ -1,4 +1,4 @@
-package com.valevoip.app.presentation.ui.componet
+package com.valevoip.core.designsystem.component
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.Warning
