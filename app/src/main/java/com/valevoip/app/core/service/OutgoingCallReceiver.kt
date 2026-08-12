@@ -3,7 +3,7 @@ package com.valevoip.app.core.service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.valevoip.app.presentation.feature.main.MainActivity
+import com.valevoip.app.MainActivity
 
 class OutgoingCallReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {

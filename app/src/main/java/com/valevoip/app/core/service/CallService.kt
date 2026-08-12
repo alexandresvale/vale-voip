@@ -8,11 +8,11 @@ import android.util.Log
 import com.valevoip.app.VALEVOIP_TAG
 import com.valevoip.app.core.notification.CallNotificationManager
 import com.valevoip.app.core.notification.CallNotificationManager.Companion.CALL_NOTIFICATION_ID
-import com.valevoip.domain.model.CallStatus
-import com.valevoip.domain.usecase.AnswerCallUseCase
-import com.valevoip.domain.usecase.GetCurrentCallNumberUseCase
-import com.valevoip.domain.usecase.HangUpUseCase
-import com.valevoip.domain.usecase.ObserveCallStateUseCase
+import com.valevoip.core.domain.model.CallStatus
+import com.valevoip.core.domain.usecase.AnswerCallUseCase
+import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
+import com.valevoip.core.domain.usecase.HangUpUseCase
+import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,16 +31,16 @@ class CallService : Service() {
     lateinit var notificationManager: CallNotificationManager
 
     @Inject
-    lateinit var hangUpUseCase: HangUpUseCase
+    lateinit var hangUpUseCase: com.valevoip.core.domain.usecase.HangUpUseCase
 
     @Inject
-    lateinit var answerCallUseCase: AnswerCallUseCase
+    lateinit var answerCallUseCase: com.valevoip.core.domain.usecase.AnswerCallUseCase
 
     @Inject
-    lateinit var observeCallStateUseCase: ObserveCallStateUseCase
+    lateinit var observeCallStateUseCase: com.valevoip.core.domain.usecase.ObserveCallStateUseCase
 
     @Inject
-    lateinit var getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase
+    lateinit var getCurrentCallNumberUseCase: com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 
     //    private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     @Inject
@@ -85,19 +85,19 @@ class CallService : Service() {
             .onEach { status ->
                 logEvent("Status recebido: $status")
                 when (status) {
-                    CallStatus.ENDED, CallStatus.IDLE -> {
+                    _root_ide_package_.com.valevoip.core.domain.model.CallStatus.ENDED, _root_ide_package_.com.valevoip.core.domain.model.CallStatus.IDLE -> {
                         isCallActive = false
                         val manager = getSystemService(NotificationManager::class.java)
                         manager.cancel(CALL_NOTIFICATION_ID)
                         hardwareManager.releaseSensors()
                     }
 
-                    CallStatus.INCOMING, CallStatus.DIALING, CallStatus.RINGING -> {
-                        updateCallNotification(isIncoming = (status == CallStatus.INCOMING))
+                    _root_ide_package_.com.valevoip.core.domain.model.CallStatus.INCOMING, _root_ide_package_.com.valevoip.core.domain.model.CallStatus.DIALING, _root_ide_package_.com.valevoip.core.domain.model.CallStatus.RINGING -> {
+                        updateCallNotification(isIncoming = (status == _root_ide_package_.com.valevoip.core.domain.model.CallStatus.INCOMING))
                         hardwareManager.activateSensors()
                     }
 
-                    CallStatus.ACTIVE -> {
+                    _root_ide_package_.com.valevoip.core.domain.model.CallStatus.ACTIVE -> {
                         updateCallNotification(isIncoming = false)
                         hardwareManager.activateSensors()
                     }

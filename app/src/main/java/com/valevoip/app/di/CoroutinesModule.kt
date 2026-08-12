@@ -1,6 +1,6 @@
 package com.valevoip.app.di
 
-import com.valevoip.domain.di.IoDispatcher
+import com.valevoip.core.domain.di.IoDispatcher
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

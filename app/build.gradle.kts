@@ -1,4 +1,5 @@
 plugins {
+    id("valevoip.android.application")
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.devtools.ksp)
@@ -8,16 +9,11 @@ plugins {
 
 android {
     namespace = "com.valevoip.app"
-    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.valevoip.app"
-        minSdk = 24
-        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -97,10 +93,19 @@ android {
 }
 
 dependencies {
-//    implementation(project(":telecom"))
-//    implementation(project(":pjsua2"))
-    implementation(project(":domain")) // Importando o domain
-    implementation(project(":data"))   // Importando o data*/
+    implementation(project(":core:domain")) 
+    implementation(project(":core:data"))   
+    implementation(project(":core:sip"))
+    implementation(project(":core:telecom"))
+    implementation(project(":core:designsystem"))
+
+    // Nossas Features!
+    implementation(project(":feature:splash"))
+    implementation(project(":feature:login"))
+    implementation(project(":feature:home"))
+    implementation(project(":feature:call"))
+    implementation(project(":feature:dialer"))
+    implementation(project(":feature:history"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
@@ -136,8 +141,8 @@ dependencies {
     ksp(libs.room.compiler)
 
     // Linphone SDK
-    debugImplementation(libs.linphone.android.debug)
-    releaseImplementation(libs.linphone.android.release)
+//    debugImplementation(libs.linphone.debug)
+    implementation(libs.linphone.release)
     implementation(libs.media)
 
     testImplementation(libs.junit)

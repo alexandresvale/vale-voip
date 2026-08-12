@@ -8,9 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.valevoip.app.R
+import com.valevoip.core.designsystem.R
 import com.valevoip.app.core.service.CallService
-import com.valevoip.app.presentation.feature.main.MainActivity
+import com.valevoip.app.MainActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
