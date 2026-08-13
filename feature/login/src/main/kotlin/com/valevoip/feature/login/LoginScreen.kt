@@ -60,7 +60,7 @@ internal fun LoginScreen(
             }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) {
+    ) { _ ->
         LoginLayout(
             uiState = uiState,
             onEvent = viewModel::onEvent

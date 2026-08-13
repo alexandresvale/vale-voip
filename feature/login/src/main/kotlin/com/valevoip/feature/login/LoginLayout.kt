@@ -167,7 +167,7 @@ internal fun LoginLayout(
 
 @Preview(showBackground = true)
 @Composable
-private fun LoginLayoutLightPreview() {
+internal fun LoginLayoutLightPreview() {
     ValeVoipTheme(darkTheme = false) {
         LoginLayout(
             uiState = LoginUiState(isLoading = false),
