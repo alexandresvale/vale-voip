@@ -2,9 +2,11 @@ package com.valevoip.feature.history
 
 import com.valevoip.core.domain.model.CallHistoryItem
 
-internal sealed interface HistoryUiState {
-    data object Loading : HistoryUiState
-    data object Empty : HistoryUiState
-    data class Success(val items: List<CallHistoryItem?>) : HistoryUiState
-    data class Error(val message: String) : HistoryUiState
-}
+internal data class HistoryUiState(
+    val isLoading: Boolean = false,
+    val allItems: List<CallHistoryItem> = emptyList(),
+    val filteredItems: List<CallHistoryItem> = emptyList(),
+    val searchQuery: String = "",
+    val filterMissed: Boolean = false,
+    val errorMessage: String? = null
+)
