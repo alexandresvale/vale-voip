@@ -35,5 +35,6 @@ interface SipClient {
     fun getCurrentCallNumber(): String?
     fun getSynchronousCallStatus(): CallStatus
     fun getCallLogs(): Result<List<CallHistoryItem>>
+    fun deleteCallLog(id: String): Result<Unit>
     fun clearCallLogs(): Result<Unit>
 }

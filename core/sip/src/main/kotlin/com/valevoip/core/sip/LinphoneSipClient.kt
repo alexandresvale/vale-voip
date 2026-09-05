@@ -299,6 +299,20 @@ internal class LinphoneSipClient(
         }
     }
 
+        override fun deleteCallLog(id: String): Result<Unit> {
+        return try {
+            val logToRemove = linphoneCore?.callLogs?.find { it.callId == id }
+            if (logToRemove != null) {
+                linphoneCore?.removeCallLog(logToRemove)
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Call log not found"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override fun clearCallLogs(): Result<Unit> {
         return try {
             linphoneCore?.clearCallLogs()

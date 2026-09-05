@@ -33,8 +33,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import com.valevoip.core.designsystem.component.ValeVoipCallButton
-import com.valevoip.core.designsystem.component.ValeVoipCallButtonType
+import com.valevoip.core.designsystem.component.ValeVoipActionButton
+import com.valevoip.core.designsystem.component.ValeVoipActionButtonType
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
 import com.valevoip.core.domain.model.CallStatus
 
@@ -122,18 +122,18 @@ private fun IncomingCallControls(onEvent: (CallUiEvent) -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ValeVoipCallButton(
+        ValeVoipActionButton(
             icon = Icons.Default.CallEnd,
             contentDescription = "Rejeitar",
-            buttonType = ValeVoipCallButtonType.DESTRUCTIVE,
+            buttonType = ValeVoipActionButtonType.DESTRUCTIVE,
             modifier = Modifier.size(72.dp),
             onClick = { onEvent(CallUiEvent.OnHangup) }
         )
 
-        ValeVoipCallButton(
+        ValeVoipActionButton(
             icon = Icons.Default.Call,
             contentDescription = "Atender",
-            buttonType = ValeVoipCallButtonType.ACCEPT,
+            buttonType = ValeVoipActionButtonType.ACCEPT,
             modifier = Modifier.size(72.dp),
             onClick = { onEvent(CallUiEvent.OnAnswer) }
         )
@@ -148,24 +148,24 @@ private fun ActiveCallControls(state: CallUiState, onEvent: (CallUiEvent) -> Uni
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                ValeVoipCallButton(
+                ValeVoipActionButton(
                     icon = Icons.Default.Dialpad,
                     label = "Teclado",
-                    buttonType = ValeVoipCallButtonType.DEFAULT,
+                    buttonType = ValeVoipActionButtonType.DEFAULT,
                     onClick = { onEvent(CallUiEvent.OnShowKeypad) }
                 )
-                ValeVoipCallButton(
+                ValeVoipActionButton(
                     icon = if (state.isMuted) Icons.Default.MicOff else Icons.Default.Mic,
                     label = "Mudo",
                     isActive = state.isMuted,
-                    buttonType = ValeVoipCallButtonType.TOGGLE,
+                    buttonType = ValeVoipActionButtonType.TOGGLE,
                     onClick = { onEvent(CallUiEvent.OnToggleMute) }
                 )
-                ValeVoipCallButton(
+                ValeVoipActionButton(
                     icon = Icons.AutoMirrored.Default.VolumeUp,
                     label = "Viva-voz",
                     isActive = state.isSpeakerOn,
-                    buttonType = ValeVoipCallButtonType.TOGGLE,
+                    buttonType = ValeVoipActionButtonType.TOGGLE,
                     onClick = { onEvent(CallUiEvent.OnToggleSpeaker) }
                 )
             }
@@ -173,10 +173,10 @@ private fun ActiveCallControls(state: CallUiState, onEvent: (CallUiEvent) -> Uni
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        ValeVoipCallButton(
+        ValeVoipActionButton(
             icon = Icons.Default.CallEnd,
             contentDescription = "Desligar",
-            buttonType = ValeVoipCallButtonType.DESTRUCTIVE,
+            buttonType = ValeVoipActionButtonType.DESTRUCTIVE,
             modifier = Modifier.size(72.dp),
             onClick = { onEvent(CallUiEvent.OnHangup) }
         )
