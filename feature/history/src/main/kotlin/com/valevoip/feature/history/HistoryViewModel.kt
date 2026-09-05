@@ -5,9 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.valevoip.core.domain.model.CallHistoryItem
 import com.valevoip.core.domain.model.CallHistoryStatus
 import com.valevoip.core.domain.usecase.ClearCallHistoryUseCase
+import com.valevoip.core.domain.usecase.DeleteCallHistoryItemUseCase
 import com.valevoip.core.domain.usecase.GetCallHistoryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -16,13 +19,34 @@ import javax.inject.Inject
 @HiltViewModel
 internal class HistoryViewModel @Inject constructor(
     private val getCallHistoryUseCase: GetCallHistoryUseCase,
-    private val clearCallHistoryUseCase: ClearCallHistoryUseCase
+    private val clearCallHistoryUseCase: ClearCallHistoryUseCase,
+    private val deleteCallHistoryItemUseCase: DeleteCallHistoryItemUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HistoryUiState(isLoading = true))
     val uiState = _uiState.asStateFlow()
 
-    fun loadHistory() {
+    private val _uiEffect = MutableSharedFlow<HistoryUiEffect>()
+    val uiEffect = _uiEffect.asSharedFlow()
+
+    fun onAction(action: HistoryUiAction) {
+        when (action) {
+            is HistoryUiAction.LoadHistory -> loadHistory()
+            is HistoryUiAction.ClearHistory -> clearHistory()
+            is HistoryUiAction.UpdateSearchQuery -> updateSearchQuery(action.query)
+            is HistoryUiAction.UpdateFilterMissed -> updateFilterMissed(action.missedOnly)
+            is HistoryUiAction.DeleteHistoryItem -> deleteHistoryItem(action.item)
+            is HistoryUiAction.CallContact -> viewModelScope.launch { _uiEffect.emit(HistoryUiEffect.NavigateToCall(action.number)) }
+            is HistoryUiAction.CopyNumber -> viewModelScope.launch { 
+                _uiEffect.emit(HistoryUiEffect.CopyToClipboard(action.number))
+                _uiEffect.emit(HistoryUiEffect.ShowToast("Número copiado"))
+            }
+            is HistoryUiAction.ShowCallDetails -> _uiState.update { it.copy(selectedCallDetails = action.item) }
+            is HistoryUiAction.DismissCallDetails -> _uiState.update { it.copy(selectedCallDetails = null) }
+        }
+    }
+
+    private fun loadHistory() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             getCallHistoryUseCase().fold(
@@ -47,7 +71,7 @@ internal class HistoryViewModel @Inject constructor(
         }
     }
 
-    fun clearHistory() {
+    private fun clearHistory() {
         viewModelScope.launch {
             clearCallHistoryUseCase().onSuccess {
                 loadHistory()
@@ -57,7 +81,17 @@ internal class HistoryViewModel @Inject constructor(
         }
     }
 
-    fun updateSearchQuery(query: String) {
+    private fun deleteHistoryItem(item: CallHistoryItem) {
+        viewModelScope.launch {
+            deleteCallHistoryItemUseCase(item.id).onSuccess {
+                loadHistory()
+            }.onFailure { error ->
+                _uiState.update { it.copy(errorMessage = error.message ?: "Erro ao apagar histórico") }
+            }
+        }
+    }
+
+    private fun updateSearchQuery(query: String) {
         _uiState.update { state ->
             state.copy(
                 searchQuery = query,
@@ -66,7 +100,7 @@ internal class HistoryViewModel @Inject constructor(
         }
     }
 
-    fun updateFilterMissed(missedOnly: Boolean) {
+    private fun updateFilterMissed(missedOnly: Boolean) {
         _uiState.update { state ->
             state.copy(
                 filterMissed = missedOnly,

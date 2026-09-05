@@ -8,5 +8,6 @@ internal data class HistoryUiState(
     val filteredItems: List<CallHistoryItem> = emptyList(),
     val searchQuery: String = "",
     val filterMissed: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val selectedCallDetails: CallHistoryItem? = null
 )
