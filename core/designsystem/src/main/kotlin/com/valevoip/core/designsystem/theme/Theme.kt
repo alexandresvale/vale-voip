@@ -8,7 +8,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
@@ -240,16 +241,42 @@ private val highContrastDarkColorScheme = darkColorScheme(
     surfaceContainerHighest = surfaceContainerHighestDarkHighContrast,
 )
 
-@Immutable
-data class ColorFamily(
-    val color: Color,
-    val onColor: Color,
-    val colorContainer: Color,
-    val onColorContainer: Color
+val LocalExtendedColors = staticCompositionLocalOf {
+    ValeVoipExtendedColors(
+        green = Color.Unspecified,
+        greenBg = Color.Unspecified,
+        greenFg = Color.Unspecified,
+        blueBg = Color.Unspecified,
+        blueFg = Color.Unspecified,
+        redBg = Color.Unspecified,
+        redFg = Color.Unspecified,
+        orange = Color.Unspecified,
+        purple = Color.Unspecified
+    )
+}
+
+val extendedLightColors = ValeVoipExtendedColors(
+    green = greenLight,
+    greenBg = greenBgLight,
+    greenFg = greenFgLight,
+    blueBg = blueBgLight,
+    blueFg = blueFgLight,
+    redBg = redBgLight,
+    redFg = redFgLight,
+    orange = orange,
+    purple = purple
 )
 
-val unspecified_scheme = ColorFamily(
-    Color.Unspecified, Color.Unspecified, Color.Unspecified, Color.Unspecified
+val extendedDarkColors = ValeVoipExtendedColors(
+    green = greenDark,
+    greenBg = greenBgDark,
+    greenFg = greenFgDark,
+    blueBg = blueBgDark,
+    blueFg = blueFgDark,
+    redBg = redBgDark,
+    redFg = redFgDark,
+    orange = orange,
+    purple = purple
 )
 
 @Composable
@@ -269,10 +296,14 @@ fun ValeVoipTheme(
         else -> lightScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        content = content
-    )
+    val extendedColors = if (darkTheme) extendedDarkColors else extendedLightColors
+
+    CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            content = content
+        )
+    }
 }
 

@@ -218,9 +218,31 @@ val surfaceContainerDarkHighContrast = Color(0xFF2E3135)
 val surfaceContainerHighDarkHighContrast = Color(0xFF393B40)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF44474C)
 
+// Cores de extens"ao.
 
+val greenLight = Color(0xFF4CAF50)
+val greenDark = Color(0xFF43A047)
 
+val blueBgLight = Color(0xFFE3F2FD)
+val blueFgLight = Color(0xFF1565C0)
+val blueBgDark = Color(0xFF003060) // Fundo escuro azulado
+val blueFgDark = Color(0xFF90CAF9)  // Ícone mais claro
 
+val redBgLight = Color(0xFFFFEBEE)
+val redFgLight = Color(0xFFC62828)
+val redBgDark = Color(0xFF5C0000)
+val redFgDark = Color(0xFFFFB4AB)
 
+val greenBgLight = Color(0xFFE8F5E9)
+val greenFgLight = Color(0xFF2E7D32)
+val greenBgDark = Color(0xFF00390A)
+val greenFgDark = Color(0xFF74D877)
 
+val orange = Color(0xFFF57C00)
+val purple = Color(0xFF9C27B0)
 
+// Tonal Grey (Histórico - Recebida)
+val TonalGreyBgLight = Color(0xFFF5F5F5)
+val TonalGreyFgLight = Color(0xFF616161)
+val TonalGreyBgDark = Color(0xFF2D2D31)
+val TonalGreyFgDark = Color(0xFFE0E0E0)
