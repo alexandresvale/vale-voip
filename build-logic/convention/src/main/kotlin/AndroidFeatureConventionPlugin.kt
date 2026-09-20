@@ -14,8 +14,10 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
             dependencies {
                 add("implementation", project(mapOf("path" to ":core:domain")))
                 add("implementation", project(mapOf("path" to ":core:designsystem")))
+                add("implementation", project(mapOf("path" to ":core:navigation")))
                 add("implementation", libs.findLibrary("androidx-lifecycle-viewmodel-ktx").get())
                 add("implementation", libs.findLibrary("hilt-navigation-compose").get())
+                add("implementation", libs.findLibrary("navigation-compose").get())
                 add("implementation", libs.findLibrary("material-icons-extended").get())
                 add("implementation", libs.findLibrary("material3").get())
             }
