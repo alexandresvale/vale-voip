@@ -28,6 +28,7 @@ val bottomNavItems = listOf(
 @Composable
 internal fun HomeScreen(
     homeViewModel: HomeViewModel = hiltViewModel(),
+    onNavigateToCall: (String) -> Unit,
     nestedGraph: NavGraphBuilder.() -> Unit
 ) {
     val state by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -38,6 +39,12 @@ internal fun HomeScreen(
 
     LaunchedEffect(Unit) {
         startMonitoringService(context)
+    }
+
+    LaunchedEffect(homeViewModel) {
+        homeViewModel.navigationChannel.collect { remoteNumber ->
+            onNavigateToCall(remoteNumber)
+        }
     }
 
     HomeLayout(

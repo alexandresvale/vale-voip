@@ -50,6 +50,9 @@ fun ValeVoipAppNavigation() {
 
         // 3. Módulo Main (Scaffold com as abas de Dialer e History)
         homeScreen(
+            onNavigateToCall = { number ->
+                navController.navigate("call_route/$number")
+            },
             nestedGraph = {
                 dialerScreen(
                     onNavigateToCall = { number ->
