@@ -15,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.valevoip.core.navigation.navigateToBottomBarRoute
 import com.valevoip.feature.home.HomeNavGraph
 import com.valevoip.feature.home.HomeViewModel
 import com.valevoip.feature.home.model.BottomBarScreen
@@ -51,13 +52,7 @@ internal fun HomeScreen(
         state = state,
         currentRoute = currentRoute,
         onBottomItemClick = { screen ->
-            bottomNavController.navigate(screen.route) {
-                popUpTo(bottomNavController.graph.startDestinationId) {
-                    saveState = true
-                }
-                launchSingleTop = true
-                restoreState = true
-            }
+            bottomNavController.navigateToBottomBarRoute(screen.route)
         },
         content = { padding ->
             Box(

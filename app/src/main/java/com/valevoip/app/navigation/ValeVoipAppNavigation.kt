@@ -3,20 +3,28 @@ package com.valevoip.app.navigation
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
-import com.valevoip.feature.call.CALL_ROUTE
 import com.valevoip.feature.call.callScreen
+import com.valevoip.feature.call.navigateToCall
 import com.valevoip.feature.dialer.dialerScreen
 import com.valevoip.feature.history.historyScreen
-import com.valevoip.feature.home.HOME_ROUTE
 import com.valevoip.feature.home.homeScreen
+import com.valevoip.feature.home.navigateToHome
 import com.valevoip.feature.login.LOGIN_ROUTE
 import com.valevoip.feature.login.loginScreen
+import com.valevoip.feature.login.navigateToLogin
 import com.valevoip.feature.splash.SPLASH_ROUTE
 import com.valevoip.feature.splash.splashScreen
 
 /**
  * Este é o Roteador Global do Vale VoIP (O App Shell).
  * Ele orquestra os Módulos de Feature de forma totalmente independente e desacoplada.
+ *
+ * Cada feature expõe:
+ * - NavGraphBuilder.featureScreen() → registra a tela no grafo
+ * - NavController.navigateToFeature() → encapsula como navegar para ela
+ *
+ * O App Shell apenas conecta os eventos de saída de uma feature
+ * às funções de navegação de entrada de outra.
  */
 @Composable
 fun ValeVoipAppNavigation() {
@@ -30,40 +38,35 @@ fun ValeVoipAppNavigation() {
         // 1. Splash Screen
         splashScreen(
             onNavigateToMain = {
-                navController.navigate(HOME_ROUTE) {
-                    popUpTo(SPLASH_ROUTE) { inclusive = true }
-                }
+                navController.navigateToHome(popUpFromRoute = SPLASH_ROUTE)
             },
             onNavigateToLogin = {
-                navController.navigate("login_graph") {
-                    popUpTo(SPLASH_ROUTE) { inclusive = true }
-                }
+                navController.navigateToLogin(popUpFromRoute = SPLASH_ROUTE)
             }
         )
 
         // 2. Módulo de Login
         loginScreen(
             onNavigateToDialer = {
-                navController.navigate(HOME_ROUTE) { popUpTo(LOGIN_ROUTE) { inclusive = true } }
+                navController.navigateToHome(popUpFromRoute = LOGIN_ROUTE)
             }
         )
 
-        // 3. Módulo Main (Scaffold com as abas de Dialer e History)
+        // 3. Módulo Home (Scaffold com as abas de Dialer e History)
         homeScreen(
             onNavigateToCall = { number ->
-                navController.navigate("call_route/$number")
+                navController.navigateToCall(number)
             },
             nestedGraph = {
                 dialerScreen(
                     onNavigateToCall = { number ->
-                        navController.navigate("call_route/$number")
+                        navController.navigateToCall(number)
                     }
                 )
 
-                // Extension que veio do módulo History
                 historyScreen(
                     onNavigateToCall = { number ->
-                        navController.navigate("call_route/$number")
+                        navController.navigateToCall(number)
                     }
                 )
             }
