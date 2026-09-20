@@ -1,0 +1,11 @@
+package com.valevoip.app.navigation
+
+sealed class Destinations(val route: String) {
+    data object SplashScreen : Destinations("splashScreen")
+    data object Onboarding : Destinations("onboarding")
+    data object Main : Destinations("main")
+    data object Dialer : Destinations("dialer")
+    data object History : Destinations("history")
+    data object Debug : Destinations("debug")
+    data object Call : Destinations("call")
+}

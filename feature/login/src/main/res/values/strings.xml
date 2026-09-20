@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vale_voip_login_welcome">Bem-vindos</string>
+    <string name="vale_voip_login_subtitle">Informe usuário e senha do seu servidor SIP.</string>
+    <string name="vale_voip_login_username_hint">Nome de usuário</string>
+    <string name="vale_voip_login_username_aux">user@dominio.com</string>
+    <string name="vale_voip_login_password_hint">Senha</string>
+    <string name="vale_voip_login_port_hint">Dominio</string>
+    <string name="vale_voip_login_start_button">Iniciar</string>
+</resources>
