@@ -28,7 +28,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.NEW_OUTGOING_CALL" />
     <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
 
@@ -70,6 +69,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Deep links for Compose Navigation -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="valevoip" />
+            </intent-filter>
         </activity>
 
         <!--<service
@@ -88,16 +95,6 @@
                 <action android:name="android.telecom.ConnectionService" />
             </intent-filter>
         </service>
-
-        <!--<receiver
-            android:name="com.valevoip.app.core.service.BootCompletedReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </receiver>-->
 
     </application>
 

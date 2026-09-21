@@ -3,6 +3,7 @@ package com.valevoip.feature.home
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
 import com.valevoip.feature.home.screen.HomeScreen
 
 const val HOME_ROUTE = "home_graph"
@@ -21,7 +22,10 @@ fun NavGraphBuilder.homeScreen(
     onNavigateToCall: (String) -> Unit,
     nestedGraph: NavGraphBuilder.() -> Unit
 ) {
-    composable(route = HOME_ROUTE) {
+    composable(
+        route = HOME_ROUTE,
+        deepLinks = listOf(navDeepLink { uriPattern = "valevoip://home" })
+    ) {
         HomeScreen(
             onNavigateToCall = onNavigateToCall,
             nestedGraph = nestedGraph

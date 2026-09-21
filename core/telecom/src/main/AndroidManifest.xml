@@ -1,4 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <application>
+        <!-- Serviço VoIP que mantém a SDK Linphone viva e gerencia notificações -->
+        <service
+            android:name="com.valevoip.core.telecom.service.VoipForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="phoneCall|camera|microphone"
+            android:stopWithTask="false" />
+
+        <!--<receiver
+            android:name="com.valevoip.core.telecom.receiver.BootCompletedReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>-->
+    </application>
+
 </manifest>

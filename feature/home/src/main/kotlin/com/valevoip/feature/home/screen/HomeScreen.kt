@@ -1,7 +1,8 @@
 package com.valevoip.feature.home.screen
 
-//import com.valevoip.app.core.service.CallService
+//import com.valevoip.app.core.service.VoipForegroundService
 import android.content.Context
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -15,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.valevoip.core.designsystem.util.SystemBarsController
 import com.valevoip.core.navigation.navigateToBottomBarRoute
 import com.valevoip.feature.home.HomeNavGraph
 import com.valevoip.feature.home.HomeViewModel
@@ -37,6 +39,8 @@ internal fun HomeScreen(
     val bottomNavController = rememberNavController()
     val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    SystemBarsController(useDarkIcons = !isSystemInDarkTheme())
 
     LaunchedEffect(Unit) {
         startMonitoringService(context)
@@ -70,8 +74,8 @@ internal fun HomeScreen(
 }
 
 private fun startMonitoringService(context: Context) {
-    /*val intent = Intent(context, CallService::class.java).apply {
-        action = CallService.ACTIONS.START_MONITORING
+    /*val intent = Intent(context, com.valevoip.core.telecom.service.VoipForegroundService::class.java).apply {
+        action = com.valevoip.core.telecom.service.VoipForegroundService.ACTION_START_MONITORING
     }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         context.startForegroundService(intent)
