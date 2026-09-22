@@ -98,6 +98,7 @@ dependencies {
     implementation(project(":core:sip"))
     implementation(project(":core:telecom"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:navigation"))
 
     // Nossas Features!
     implementation(project(":feature:splash"))
