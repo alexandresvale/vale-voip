@@ -38,7 +38,7 @@ internal fun HomeScreen(
     val context = LocalContext.current
     val bottomNavController = rememberNavController()
     val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val currentDestination = navBackStackEntry?.destination
 
     SystemBarsController(useDarkIcons = !isSystemInDarkTheme())
 
@@ -54,7 +54,7 @@ internal fun HomeScreen(
 
     HomeLayout(
         state = state,
-        currentRoute = currentRoute,
+        currentDestination = currentDestination,
         onBottomItemClick = { screen ->
             bottomNavController.navigateToBottomBarRoute(screen.route)
         },

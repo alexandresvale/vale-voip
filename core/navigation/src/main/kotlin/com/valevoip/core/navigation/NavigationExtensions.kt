@@ -3,6 +3,8 @@ package com.valevoip.core.navigation
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 
+const val NAV_ANIMATION_DURATION_MS = 300
+
 /**
  * Navega para uma rota da BottomBar garantindo o comportamento correto de
  * salvar estado, evitar duplicidade e limpar a pilha.
@@ -12,7 +14,7 @@ import androidx.navigation.NavHostController
  * - launchSingleTop para evitar múltiplas cópias
  * - restoreState para preservar scroll, inputs, etc.
  */
-fun NavHostController.navigateToBottomBarRoute(route: String) {
+fun <T : Any> NavHostController.navigateToBottomBarRoute(route: T) {
     navigate(route) {
         popUpTo(graph.findStartDestination().id) {
             saveState = true

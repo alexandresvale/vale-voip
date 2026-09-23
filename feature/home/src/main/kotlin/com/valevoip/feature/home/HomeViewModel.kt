@@ -36,7 +36,7 @@ internal class HomeViewModel @Inject constructor(
     val navigationChannel = _navigationChannel.receiveAsFlow()
 
     init {
-        monitorIncomingCalls()
+//        monitorIncomingCalls()
         observeConnection()
         autoReconnect()
     }

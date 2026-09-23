@@ -6,7 +6,7 @@ import androidx.navigation.NavController
  * Navega para a rota garantindo que não haja duplicatas na pilha.
  * Útil para navegações globais (ex: abrir tela de chamada).
  */
-fun NavController.navigateSingleTop(route: String) {
+fun <T : Any> NavController.navigateSingleTop(route: T) {
     navigate(route) {
         launchSingleTop = true
     }
