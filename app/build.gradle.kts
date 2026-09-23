@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.devtools.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -107,6 +108,9 @@ dependencies {
     implementation(project(":feature:call"))
     implementation(project(":feature:dialer"))
     implementation(project(":feature:history"))
+
+    // Kotlin
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
