@@ -2,6 +2,7 @@ package com.valevoip.feature.home
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
 import com.valevoip.core.navigation.route.HomeGraphRoute
 import com.valevoip.core.navigation.route.HomeStartRoute
@@ -16,7 +17,9 @@ fun NavGraphBuilder.mainGraph(
     nestedGraph: NavGraphBuilder.() -> Unit
 ) {
     navigation<HomeGraphRoute>(startDestination = HomeStartRoute) {
-        composable<HomeStartRoute> {
+        composable<HomeStartRoute>(
+            deepLinks = listOf(navDeepLink<HomeStartRoute>(basePath = "valevoip://home"))
+        ) {
             HomeScreen(onNavigateToCall = onNavigateToCall, nestedGraph = nestedGraph)
         }
     }

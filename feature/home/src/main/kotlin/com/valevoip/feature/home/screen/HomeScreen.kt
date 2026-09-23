@@ -76,12 +76,6 @@ internal fun HomeScreen(
         }
     }
 
-    LaunchedEffect(homeViewModel) {
-        homeViewModel.navigationChannel.collect { remoteNumber ->
-            onNavigateToCall(remoteNumber)
-        }
-    }
-
     HomeLayout(
         state = state,
         currentDestination = currentDestination,
@@ -107,9 +101,5 @@ private fun startMonitoringService(context: Context) {
     val intent = Intent(context, VoipForegroundService::class.java).apply {
         action = VoipForegroundService.ACTION_START_MONITORING
     }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        context.startForegroundService(intent)
-    } else {
-        context.startService(intent)
-    }
+    context.startForegroundService(intent)
 }

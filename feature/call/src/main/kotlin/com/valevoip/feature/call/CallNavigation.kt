@@ -4,12 +4,13 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
+import androidx.navigation.navDeepLink
 import com.valevoip.core.navigation.NAV_ANIMATION_DURATION_MS
 import com.valevoip.core.navigation.route.CallRoute
 
 fun NavGraphBuilder.callScreen(onNavigateBack: () -> Unit) {
     composable<CallRoute>(
+        deepLinks = listOf(navDeepLink<CallRoute>(basePath = "valevoip://call")),
         enterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Up,

@@ -38,7 +38,10 @@ fun AppNavHost(navigationCommandBus: NavigationCommandBus) {
     LaunchedEffect(navController) {
         navigationCommandBus.commands.collect { command ->
             when (command) {
-                is NavigationCommand.ToCall -> navController.navigate(CallRoute(number = command.number))
+                is NavigationCommand.ToCall -> navController.navigate(CallRoute(number = command.number)) {
+                    launchSingleTop = true
+                }
+
                 is NavigationCommand.ToHome -> navController.navigate(HomeGraphRoute) {
                     popUpTo(SplashRoute) { inclusive = true }
                 }
@@ -123,7 +126,20 @@ fun AppNavHost(navigationCommandBus: NavigationCommandBus) {
 
         // 4. Módulo de Chamada Ativa (Onde o Linphone age)
         callScreen(
-            onNavigateBack = { navController.popBackStack() }
+            onNavigateBack = {
+                val prevRoute = navController.previousBackStackEntry?.destination?.route
+                if (prevRoute?.contains("SplashRoute") == true) {
+                    // A tela foi aberta via Deep Link (Notificação).
+                    // O Navigation coloca a Splash no fundo do BackStack sintético.
+                    // Em vez de voltar pra Splash, pulamos direto para a Home!
+                    navController.navigate(HomeGraphRoute) {
+                        popUpTo(SplashRoute) { inclusive = true }
+                    }
+                } else {
+                    // Fluxo normal do app
+                    navController.popBackStack()
+                }
+            }
         )
     }
 }

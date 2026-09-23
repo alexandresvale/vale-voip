@@ -9,6 +9,8 @@ import com.valevoip.core.domain.usecase.AnswerCallUseCase
 import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
+import com.valevoip.core.navigation.NavigationCommand
+import com.valevoip.core.navigation.NavigationCommandBus
 import com.valevoip.core.telecom.notification.VoipNotificationManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -26,14 +28,22 @@ class VoipForegroundService : Service() {
 
     @Inject
     lateinit var notificationManager: VoipNotificationManager
+
     @Inject
     lateinit var hangUpUseCase: HangUpUseCase
+
     @Inject
     lateinit var answerCallUseCase: AnswerCallUseCase
+
     @Inject
     lateinit var observeCallStateUseCase: ObserveCallStateUseCase
+
+    @Inject
+    lateinit var navigationCommandBus: NavigationCommandBus
+
     @Inject
     lateinit var getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase
+
     @Inject
     lateinit var wakeLockManager: ProximityWakeLockManager
 
@@ -104,9 +114,15 @@ class VoipForegroundService : Service() {
 
             CallStatus.INCOMING -> {
                 isCallActive = true
-                val number = getCurrentCallNumberUseCase()
+                val number = getCurrentCallNumberUseCase() ?: ""
                 showCallNotification(isIncoming = true)
                 wakeLockManager.acquire()
+
+                // Dispara comando de navegação!
+                // Se o app estiver aberto (foreground), a tela abre na hora.
+                // Se estiver fechado (background), o comando fica no buffer e executa
+                // no exato momento que o usuário clica na notificação e o app vem pro topo.
+                navigationCommandBus.navigate(NavigationCommand.ToCall(number))
             }
 
             CallStatus.DIALING, CallStatus.RINGING -> {

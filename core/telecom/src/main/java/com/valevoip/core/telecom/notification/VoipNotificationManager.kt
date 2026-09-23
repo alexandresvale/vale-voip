@@ -66,7 +66,7 @@ class VoipNotificationManager @Inject constructor(
         serviceClass: Class<*>
     ): Notification {
         val uriString = if (contactName.isNotBlank()) {
-            "valevoip://call/${Uri.encode(contactName)}"
+            "valevoip://call?number=${Uri.encode(contactName)}"
         } else {
             "valevoip://call"
         }
