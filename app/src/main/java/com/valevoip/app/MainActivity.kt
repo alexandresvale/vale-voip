@@ -1,5 +1,6 @@
 package com.valevoip.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,5 +27,10 @@ class MainActivity : ComponentActivity() {
                 AppNavHost(navigationCommandBus = navigationCommandBus)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 }

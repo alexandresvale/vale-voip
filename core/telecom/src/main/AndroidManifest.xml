@@ -6,7 +6,7 @@
         <service
             android:name="com.valevoip.core.telecom.service.VoipForegroundService"
             android:exported="false"
-            android:foregroundServiceType="phoneCall|camera|microphone"
+            android:foregroundServiceType="phoneCall|microphone"
             android:stopWithTask="false" />
 
         <!--<receiver

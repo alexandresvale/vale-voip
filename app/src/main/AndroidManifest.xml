@@ -79,12 +79,12 @@
             </intent-filter>
         </activity>
 
-        <!--<service
-            android:name="com.valevoip.app.core.service.CallService"
-            android:description="@string/app_name"
+        <!-- Serviço em segundo plano/primeiro plano para monitoramento VoIP e notificações -->
+        <service
+            android:name="com.valevoip.core.telecom.service.VoipForegroundService"
             android:exported="false"
-            android:foregroundServiceType="phoneCall|camera|microphone"
-            android:stopWithTask="false" />-->
+            android:stopWithTask="false"
+            android:foregroundServiceType="phoneCall|microphone" />
 
         <!-- Registra nosso aplicativo como capacitado para processar chamadas VoIP nativas -->
         <service

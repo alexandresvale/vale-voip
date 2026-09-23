@@ -68,12 +68,12 @@ internal class CallViewModel @Inject constructor(
 
     private fun startCall(number: String) {
         logEvent("startCall - $number")
-        val number = when (number) {
+        val numberToCall = when (number) {
             "2525" -> "valevoipios"
             "5555" -> "alexandreskt16"
             else -> number
         }
-        makeCallUseCase(number)
+        makeCallUseCase(numberToCall)
             .onSuccess {
                 logEvent("Chamada enviada com sucesso para o core.")
             }

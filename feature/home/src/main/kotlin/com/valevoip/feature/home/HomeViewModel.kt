@@ -3,7 +3,6 @@ package com.valevoip.feature.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-//import com.valevoip.app.VALEVOIP_TAG
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.usecase.GetAccountUseCase
 import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
@@ -36,7 +35,7 @@ internal class HomeViewModel @Inject constructor(
     val navigationChannel = _navigationChannel.receiveAsFlow()
 
     init {
-//        monitorIncomingCalls()
+        monitorIncomingCalls()
         observeConnection()
         autoReconnect()
     }

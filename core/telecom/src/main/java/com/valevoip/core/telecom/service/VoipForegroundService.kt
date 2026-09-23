@@ -9,7 +9,6 @@ import com.valevoip.core.domain.usecase.AnswerCallUseCase
 import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
-import com.valevoip.core.navigation.CallNavigator
 import com.valevoip.core.telecom.notification.VoipNotificationManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -25,13 +24,18 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class VoipForegroundService : Service() {
 
-    @Inject lateinit var callNavigator: CallNavigator
-    @Inject lateinit var notificationManager: VoipNotificationManager
-    @Inject lateinit var hangUpUseCase: HangUpUseCase
-    @Inject lateinit var answerCallUseCase: AnswerCallUseCase
-    @Inject lateinit var observeCallStateUseCase: ObserveCallStateUseCase
-    @Inject lateinit var getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase
-    @Inject lateinit var wakeLockManager: ProximityWakeLockManager
+    @Inject
+    lateinit var notificationManager: VoipNotificationManager
+    @Inject
+    lateinit var hangUpUseCase: HangUpUseCase
+    @Inject
+    lateinit var answerCallUseCase: AnswerCallUseCase
+    @Inject
+    lateinit var observeCallStateUseCase: ObserveCallStateUseCase
+    @Inject
+    lateinit var getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase
+    @Inject
+    lateinit var wakeLockManager: ProximityWakeLockManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var observerJob: Job? = null
@@ -101,7 +105,6 @@ class VoipForegroundService : Service() {
             CallStatus.INCOMING -> {
                 isCallActive = true
                 val number = getCurrentCallNumberUseCase()
-                callNavigator.navigateToCall(number)
                 showCallNotification(isIncoming = true)
                 wakeLockManager.acquire()
             }

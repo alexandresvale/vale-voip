@@ -16,7 +16,7 @@ data object HomeStartRoute
 
 
 @Serializable
-data class CallRoute(val number: String)
+data class CallRoute(val number: String = "")
 
 @Serializable
 data object DialerRoute

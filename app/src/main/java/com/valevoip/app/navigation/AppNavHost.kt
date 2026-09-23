@@ -102,7 +102,9 @@ fun AppNavHost(navigationCommandBus: NavigationCommandBus) {
         // 3. Módulo Home (Scaffold com as abas de Dialer e History)
         mainGraph(
             onNavigateToCall = { number ->
-                navController.navigate(CallRoute(number))
+                navController.navigate(CallRoute(number)) {
+                    launchSingleTop = true
+                }
             },
             nestedGraph = {
                 dialerScreen(

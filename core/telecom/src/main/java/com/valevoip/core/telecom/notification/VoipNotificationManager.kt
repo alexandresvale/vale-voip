@@ -65,7 +65,12 @@ class VoipNotificationManager @Inject constructor(
         isIncoming: Boolean,
         serviceClass: Class<*>
     ): Notification {
-        val openAppIntent = Intent(Intent.ACTION_VIEW, Uri.parse("valevoip://call/$contactName")).apply {
+        val uriString = if (contactName.isNotBlank()) {
+            "valevoip://call/${Uri.encode(contactName)}"
+        } else {
+            "valevoip://call"
+        }
+        val openAppIntent = Intent(Intent.ACTION_VIEW, Uri.parse(uriString)).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 

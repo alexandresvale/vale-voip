@@ -35,9 +35,7 @@ fun NavGraphBuilder.callScreen(onNavigateBack: () -> Unit) {
             )
         }
     ) { backStackEntry ->
-        val callRoute = backStackEntry.toRoute<CallRoute>()
         CallScreen(
-            //number = callRoute.number,
             onNavigateBack = onNavigateBack
         )
     }
