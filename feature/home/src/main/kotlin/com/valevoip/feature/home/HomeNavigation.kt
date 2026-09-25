@@ -2,16 +2,25 @@ package com.valevoip.feature.home
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
+import androidx.navigation.navigation
+import com.valevoip.core.navigation.route.HomeGraphRoute
+import com.valevoip.core.navigation.route.HomeStartRoute
 import com.valevoip.feature.home.screen.HomeScreen
 
-const val HOME_ROUTE = "home_graph"
-
-fun NavGraphBuilder.homeScreen(
+/**
+ * Sub-grafo da tela principal com as abas internas.
+ * O AppNavHost declara este bloco e fornece os callbacks de saída.
+ */
+fun NavGraphBuilder.mainGraph(
+    onNavigateToCall: (String) -> Unit,
     nestedGraph: NavGraphBuilder.() -> Unit
 ) {
-    composable(route = HOME_ROUTE) {
-        HomeScreen(
-            nestedGraph = nestedGraph
-        )
+    navigation<HomeGraphRoute>(startDestination = HomeStartRoute) {
+        composable<HomeStartRoute>(
+            deepLinks = listOf(navDeepLink<HomeStartRoute>(basePath = "valevoip://home"))
+        ) {
+            HomeScreen(onNavigateToCall = onNavigateToCall, nestedGraph = nestedGraph)
+        }
     }
 }

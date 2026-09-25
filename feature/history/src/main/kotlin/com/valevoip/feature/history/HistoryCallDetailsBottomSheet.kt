@@ -81,7 +81,6 @@ internal fun HistoryCallDetailsContent(
 ) {
     Column(
         modifier = Modifier
-            .background(color = MaterialTheme.colorScheme.background)
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
             .padding(bottom = 32.dp),

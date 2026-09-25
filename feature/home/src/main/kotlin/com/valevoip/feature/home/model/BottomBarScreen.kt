@@ -9,28 +9,32 @@ import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
-sealed class BottomBarScreen(
-    val route: String,
+import com.valevoip.core.navigation.route.DialerRoute
+import com.valevoip.core.navigation.route.HistoryRoute
+import com.valevoip.core.navigation.route.SettingsRoute
+
+sealed class BottomBarScreen<T : Any>(
+    val route: T,
     val title: String,
     val icon: ImageVector,
     val iconSelected: ImageVector
 ) {
-    object Dialer : BottomBarScreen(
-        route = "dialer_route",
+    data object Dialer : BottomBarScreen<DialerRoute>(
+        route = DialerRoute,
         title = "Discador",
         icon = Icons.Outlined.Call,
         iconSelected = Icons.Filled.Call
     )
 
-    object History : BottomBarScreen(
-        route = "history_route",
+    data object History : BottomBarScreen<HistoryRoute>(
+        route = HistoryRoute,
         title = "Histórico",
         icon = Icons.Outlined.DateRange,
         iconSelected = Icons.Filled.DateRange
     )
 
-    object Settings : BottomBarScreen(
-        route = "settings_route",
+    data object Settings : BottomBarScreen<SettingsRoute>(
+        route = SettingsRoute,
         title = "Configuração",
         icon = Icons.Outlined.Settings,
         iconSelected = Icons.Filled.Settings

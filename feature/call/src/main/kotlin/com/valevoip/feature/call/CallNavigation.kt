@@ -1,12 +1,41 @@
 package com.valevoip.feature.call
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
+import com.valevoip.core.navigation.NAV_ANIMATION_DURATION_MS
+import com.valevoip.core.navigation.route.CallRoute
 
-const val CALL_ROUTE = "call_route/{number}"
 fun NavGraphBuilder.callScreen(onNavigateBack: () -> Unit) {
-    composable(route = CALL_ROUTE) { backStackEntry ->
-        val number = backStackEntry.arguments?.getString("number") ?: ""
+    composable<CallRoute>(
+        deepLinks = listOf(navDeepLink<CallRoute>(basePath = "valevoip://call")),
+        enterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                animationSpec = tween(NAV_ANIMATION_DURATION_MS)
+            )
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                animationSpec = tween(NAV_ANIMATION_DURATION_MS)
+            )
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                animationSpec = tween(NAV_ANIMATION_DURATION_MS)
+            )
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                animationSpec = tween(NAV_ANIMATION_DURATION_MS)
+            )
+        }
+    ) { backStackEntry ->
         CallScreen(
             onNavigateBack = onNavigateBack
         )

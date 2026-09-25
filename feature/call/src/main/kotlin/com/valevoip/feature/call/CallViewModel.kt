@@ -57,6 +57,18 @@ internal class CallViewModel @Inject constructor(
     private fun handleCallInitialization() {
         logEvent("Iniciando avaliação de chamada (handleCallInitialization)")
         val number = savedStateHandle.get<String>("number")
+
+        // Proteção: Se já temos uma chamada ativa ou tocando (via SIP), 
+        // não devemos iniciar uma nova chamada de saída!
+        val currentStatus = getCallStatusSyncUseCase()
+        if (currentStatus != CallStatus.IDLE && currentStatus != CallStatus.ENDED) {
+            logEvent("Já existe uma chamada no estado: $currentStatus. Apenas exibindo a tela.")
+            if (!number.isNullOrBlank()) {
+                _uiState.update { it.copy(contactNumber = number) }
+            }
+            return
+        }
+
         if (!number.isNullOrBlank() && !hasInitiatedCall) {
             hasInitiatedCall = true
             _uiState.update { it.copy(contactNumber = number) }
@@ -68,12 +80,12 @@ internal class CallViewModel @Inject constructor(
 
     private fun startCall(number: String) {
         logEvent("startCall - $number")
-        val number = when (number) {
+        val numberToCall = when (number) {
             "2525" -> "valevoipios"
             "5555" -> "alexandreskt16"
             else -> number
         }
-        makeCallUseCase(number)
+        makeCallUseCase(numberToCall)
             .onSuccess {
                 logEvent("Chamada enviada com sucesso para o core.")
             }

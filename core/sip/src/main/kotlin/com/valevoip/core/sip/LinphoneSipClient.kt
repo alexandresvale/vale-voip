@@ -117,11 +117,14 @@ internal class LinphoneSipClient(
         )
 
         val accountParams = core.createAccountParams()
+        // Define a identidade (Usuário)
         val identify = Factory.instance().createAddress("sip:${account.username}@${account.domain}")
         accountParams.identityAddress = identify
 
-        // Define o endereço do servidor (Proxy)
-        accountParams.serverAddress = Factory.instance().createAddress("sip:${account.domain}")
+        // Define o endereço do servidor (Proxy) com o transporte forçado para TCP (ou TLS)
+        val serverAddress = Factory.instance().createAddress("sip:${account.domain}")
+        serverAddress?.transport = org.linphone.core.TransportType.Tcp
+        accountParams.serverAddress = serverAddress
         accountParams.isRegisterEnabled = true
 
         val linphoneAccount = core.createAccount(accountParams)
@@ -285,8 +288,8 @@ internal class LinphoneSipClient(
 
                 CallHistoryItem(
                     id = log.callId ?: "",
-                    remoteAddress = log.remoteAddress?.username ?: "Desconhecido",
-                    displayName = log.remoteAddress?.displayName,
+                    remoteAddress = log.remoteAddress.username ?: "Desconhecido",
+                    displayName = log.remoteAddress.displayName,
                     direction = direction,
                     status = status,
                     timestamp = log.startDate * 1000L,

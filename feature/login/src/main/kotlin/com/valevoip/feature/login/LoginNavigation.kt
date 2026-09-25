@@ -2,13 +2,12 @@ package com.valevoip.feature.login
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-
-const val LOGIN_ROUTE = "login_graph"
+import com.valevoip.core.navigation.route.LoginRoute
 
 fun NavGraphBuilder.loginScreen(
     onNavigateToDialer: () -> Unit
 ) {
-    composable(route = LOGIN_ROUTE) {
+    composable<LoginRoute> {
         LoginScreen(
             onNavigateToDialer = onNavigateToDialer
         )

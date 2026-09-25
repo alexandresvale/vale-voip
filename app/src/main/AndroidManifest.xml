@@ -7,40 +7,14 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
-    <!-- Permissões essenciais para áudio e chamadas SIP (VoIP) -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-
+    <!-- Permissões essenciais para o App Shell -->
     <uses-permission android:name="android.permission.CAMERA" />
-
-    <!-- Permissões para Foreground Service e TelecomManager (Transformar o app num telefone) -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
-    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
-
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <uses-permission android:name="android.permission.NEW_OUTGOING_CALL" />
-    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
 
-    <uses-feature
-        android:name="android.hardware.microphone"
-        android:required="true" />
     <uses-feature
         android:name="android.hardware.wifi"
         android:required="true" />
-    <uses-feature
-        android:name="android.hardware.telephony"
-        android:required="false" />
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
@@ -70,34 +44,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
 
-        <!--<service
-            android:name="com.valevoip.app.core.service.CallService"
-            android:description="@string/app_name"
-            android:exported="false"
-            android:foregroundServiceType="phoneCall|camera|microphone"
-            android:stopWithTask="false" />-->
-
-        <!-- Registra nosso aplicativo como capacitado para processar chamadas VoIP nativas -->
-        <service
-            android:name="com.valevoip.core.telecom.ValeConnectionService"
-            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE"
-            android:exported="true">
+            <!-- Deep links for Compose Navigation -->
             <intent-filter>
-                <action android:name="android.telecom.ConnectionService" />
-            </intent-filter>
-        </service>
-
-        <!--<receiver
-            android:name="com.valevoip.app.core.service.BootCompletedReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="valevoip" />
             </intent-filter>
-        </receiver>-->
+        </activity>
 
     </application>
 
