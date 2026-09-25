@@ -288,8 +288,8 @@ internal class LinphoneSipClient(
 
                 CallHistoryItem(
                     id = log.callId ?: "",
-                    remoteAddress = log.remoteAddress?.username ?: "Desconhecido",
-                    displayName = log.remoteAddress?.displayName,
+                    remoteAddress = log.remoteAddress.username ?: "Desconhecido",
+                    displayName = log.remoteAddress.displayName,
                     direction = direction,
                     status = status,
                     timestamp = log.startDate * 1000L,
