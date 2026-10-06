@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import com.valevoip.core.designsystem.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import androidx.core.net.toUri
 
 /**
  * Gerencia todas as notificações do VoIP.
@@ -40,7 +41,7 @@ class VoipNotificationManager @Inject constructor(
     // --- Notificação de Serviço (Online) ---
 
     fun buildOnlineNotification(): Notification {
-        val openAppIntent = Intent(Intent.ACTION_VIEW, Uri.parse("valevoip://home")).apply {
+        val openAppIntent = Intent(Intent.ACTION_VIEW, "valevoip://home".toUri()).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
@@ -70,7 +71,7 @@ class VoipNotificationManager @Inject constructor(
         } else {
             "valevoip://call"
         }
-        val openAppIntent = Intent(Intent.ACTION_VIEW, Uri.parse(uriString)).apply {
+        val openAppIntent = Intent(Intent.ACTION_VIEW, uriString.toUri()).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 
@@ -141,26 +142,24 @@ class VoipNotificationManager @Inject constructor(
     }
 
     private fun createChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(
-                SERVICE_CHANNEL_ID,
-                "Status do Serviço VoIP",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Indica que o serviço VoIP está ativo"
-            }
-
-            val callChannel = NotificationChannel(
-                CALL_CHANNEL_ID,
-                "Chamadas VoIP",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notificações de chamadas recebidas e ativas"
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            }
-
-            notificationManager.createNotificationChannel(serviceChannel)
-            notificationManager.createNotificationChannel(callChannel)
+        val serviceChannel = NotificationChannel(
+            SERVICE_CHANNEL_ID,
+            "Status do Serviço VoIP",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Indica que o serviço VoIP está ativo"
         }
+
+        val callChannel = NotificationChannel(
+            CALL_CHANNEL_ID,
+            "Chamadas VoIP",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Notificações de chamadas recebidas e ativas"
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+
+        notificationManager.createNotificationChannel(serviceChannel)
+        notificationManager.createNotificationChannel(callChannel)
     }
 }

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 internal class CallViewModel @Inject constructor(
@@ -154,7 +155,7 @@ internal class CallViewModel @Inject constructor(
         timerJob = viewModelScope.launch {
             logEvent("Timer iniciado")
             while (true) {
-                delay(1000)
+                delay(1000.milliseconds)
                 _uiState.update { state ->
                     val newDuration = state.duration + 1
                     state.copy(

@@ -15,12 +15,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
             val serviceIntent = Intent(context, VoipForegroundService::class.java).apply {
                 action = VoipForegroundService.ACTION_START_MONITORING
             }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
-            }
+            context.startForegroundService(serviceIntent)
         }
     }
 }
