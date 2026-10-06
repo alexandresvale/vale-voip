@@ -115,7 +115,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.activity.compose)
-    implementation(libs.androidx.fragment.ktx)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.ui)
