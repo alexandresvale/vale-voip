@@ -1,5 +1,7 @@
+@file:SuppressLint("UnsafeOptInUsageError")
 package com.valevoip.core.navigation.route
 
+import android.annotation.SuppressLint
 import kotlinx.serialization.Serializable
 
 @Serializable
