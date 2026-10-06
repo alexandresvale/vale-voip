@@ -31,6 +31,8 @@ jetbrains-kotlin-jvm = "2.1.0"
 javaxInject = "1"
 # Linphone Version 5.5.13
 linphone  =  "5.5.13"
+# MockK
+mockk = "1.13.10"
 
 [libraries]
 
@@ -73,6 +75,7 @@ media = { group = "androidx.media", name = "media", version = "1.7.0" }
 # Kotlin | Corountines
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines"}
 kotlinx-coroutines-androide = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines"}
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines"}
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.7.3" }
 
 # Navigation Compose
@@ -97,6 +100,9 @@ androidx-test-runner = { group = "androidx.test", name = "runner", version = "1.
 
 # Javax Inject para adicionar a notação @Inject no usecase.
 javax-inject = { group = "javax.inject", name = "javax.inject", version.ref = "javaxInject" }
+
+# MockK
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -22,6 +22,11 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("material-icons-extended").get())
                 add("implementation", libs.findLibrary("material3").get())
                 add("implementation", libs.findLibrary("kotlinx-serialization-json").get())
+
+                // Dependncias Base para Testes Unitrios e de Integrao
+                add("testImplementation", libs.findLibrary("junit").get())
+                add("testImplementation", libs.findLibrary("kotlinx-coroutines-test").get())
+                add("testImplementation", libs.findLibrary("mockk").get())
             }
         }
     }
