@@ -25,6 +25,12 @@ class AndroidComposeConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("material3").get())
                 add("debugImplementation", libs.findLibrary("ui-tooling").get())
                 add("debugImplementation", libs.findLibrary("ui-test-manifest").get())
+
+                // Dependncias Base para Testes Instrumentados do Compose
+                add("androidTestImplementation", platform(bom))
+                add("androidTestImplementation", libs.findLibrary("ui-test-junit4").get())
+                add("androidTestImplementation", libs.findLibrary("androidx-test-ext-junit").get())
+                add("androidTestImplementation", libs.findLibrary("androidx-test-runner").get())
             }
         }
     }

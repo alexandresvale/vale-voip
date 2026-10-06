@@ -9,8 +9,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.valevoip.core.designsystem.util.SystemBarsController
 
-//import com.valevoip.app.presentation.feature.main.MainViewModel
-
 @Composable
 internal fun SplashScreen(
     onNavigate: (hasConfig: Boolean) -> Unit,

@@ -38,9 +38,9 @@ enum class ValeVoipActionButtonType {
 
 @Composable
 fun ValeVoipActionButton(
+    modifier: Modifier = Modifier,
     isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme(),
     icon: ImageVector,
-    modifier: Modifier = Modifier,
     label: String? = null,
     contentDescription: String? = null,
     isActive: Boolean = false,

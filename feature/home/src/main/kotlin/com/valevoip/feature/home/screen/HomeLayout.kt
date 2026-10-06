@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
 import com.valevoip.core.domain.model.SipRegistrationState
 import com.valevoip.feature.home.HomeUiState
@@ -29,11 +31,13 @@ import com.valevoip.feature.home.model.BottomBarScreen
 @Composable
 internal fun HomeLayout(
     state: HomeUiState,
-    currentRoute: String?,
-    onBottomItemClick: (BottomBarScreen) -> Unit,
+    currentDestination: NavDestination?,
+    onBottomItemClick: (BottomBarScreen<*>) -> Unit,
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    val currentScreen = bottomNavItems.find { it.route == currentRoute } ?: BottomBarScreen.Dialer
+    val currentScreen = bottomNavItems.find { screen ->
+        currentDestination?.hasRoute(screen.route::class) == true
+    } ?: BottomBarScreen.Dialer
 
     Scaffold(
         topBar = {
@@ -54,7 +58,7 @@ internal fun HomeLayout(
         },
         bottomBar = {
             BottomNavigationBar(
-                currentRoute = currentRoute,
+                currentDestination = currentDestination,
                 onItemClick = onBottomItemClick
             )
         }
@@ -83,12 +87,12 @@ private fun ConnectionStatusIndicator(state: SipRegistrationState, modifier: Mod
 
 @Composable
 private fun BottomNavigationBar(
-    currentRoute: String?,
-    onItemClick: (BottomBarScreen) -> Unit = {},
+    currentDestination: NavDestination?,
+    onItemClick: (BottomBarScreen<*>) -> Unit = {},
 ) {
     NavigationBar {
         bottomNavItems.forEach { screen ->
-            val isSelected = currentRoute == screen.route
+            val isSelected = currentDestination?.hasRoute(screen.route::class) == true
             NavigationBarItem(
                 label = { Text(text = screen.title) },
                 selected = isSelected,
@@ -114,7 +118,7 @@ internal fun HomeLayoutPreview() {
     ValeVoipTheme() {
         HomeLayout(
             state = HomeUiState(),
-            currentRoute = null,
+            currentDestination = null,
             onBottomItemClick = {},
             content = {}
         )

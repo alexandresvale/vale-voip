@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.devtools.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -98,6 +99,7 @@ dependencies {
     implementation(project(":core:sip"))
     implementation(project(":core:telecom"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:navigation"))
 
     // Nossas Features!
     implementation(project(":feature:splash"))
@@ -107,10 +109,12 @@ dependencies {
     implementation(project(":feature:dialer"))
     implementation(project(":feature:history"))
 
+    // Kotlin
+    implementation(libs.kotlinx.serialization.json)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.activity.compose)
-    implementation(libs.androidx.fragment.ktx)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.ui)

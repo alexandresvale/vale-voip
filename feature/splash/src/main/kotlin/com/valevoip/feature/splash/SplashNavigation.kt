@@ -2,14 +2,13 @@ package com.valevoip.feature.splash
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-
-const val SPLASH_ROUTE = "splash_route"
+import com.valevoip.core.navigation.route.SplashRoute
 
 fun NavGraphBuilder.splashScreen(
     onNavigateToMain: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
-    composable(route = SPLASH_ROUTE) {
+    composable<SplashRoute> {
         SplashScreen(
             onNavigate = { hasConfig ->
                 if (hasConfig) onNavigateToMain() else onNavigateToLogin()

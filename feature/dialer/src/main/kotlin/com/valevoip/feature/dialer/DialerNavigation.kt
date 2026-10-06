@@ -2,11 +2,10 @@ package com.valevoip.feature.dialer
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-
-const val DIALER_ROUTE = "dialer_route"
+import com.valevoip.core.navigation.route.DialerRoute
 
 fun NavGraphBuilder.dialerScreen(onNavigateToCall: (String) -> Unit) {
-    composable(route = DIALER_ROUTE) {
+    composable<DialerRoute> {
         DialerScreen(onNavigateToCall = onNavigateToCall)
     }
 }

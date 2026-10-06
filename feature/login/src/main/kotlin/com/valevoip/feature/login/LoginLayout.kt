@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,13 +12,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,7 +43,36 @@ import com.valevoip.core.designsystem.R as DesignR
 @Composable
 internal fun LoginLayout(
     uiState: LoginUiState,
-    onEvent: (LoginUiEvent) -> Unit
+    onEvent: (LoginUiEvent) -> Unit,
+    snackBarHostState: SnackbarHostState
+) {
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackBarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    actionColor = MaterialTheme.colorScheme.onErrorContainer,
+                    dismissActionContentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { padding ->
+        LoginContent(
+            paddingValues = padding,
+            uiState = uiState,
+            onEvent = onEvent
+        )
+    }
+}
+
+@Composable
+internal fun LoginContent(
+    paddingValues: PaddingValues,
+    uiState: LoginUiState,
+    onEvent: (LoginUiEvent) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
@@ -49,7 +81,7 @@ internal fun LoginLayout(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(paddingValues)
             .imePadding(),
     ) {
         Column(
@@ -170,6 +202,7 @@ internal fun LoginLayout(
 internal fun LoginLayoutLightPreview() {
     ValeVoipTheme(darkTheme = false) {
         LoginLayout(
+            snackBarHostState = SnackbarHostState(),
             uiState = LoginUiState(isLoading = false),
             onEvent = {}
         )

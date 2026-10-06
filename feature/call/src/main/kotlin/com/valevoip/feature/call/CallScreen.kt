@@ -51,7 +51,7 @@ internal fun CallScreen(
 
     LaunchedEffect(state.callStatus) {
         if (state.callStatus == CallStatus.ENDED) {
-            delay(1000.milliseconds)
+            delay(300.milliseconds)
             onNavigateBack()
         }
     }

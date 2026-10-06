@@ -1,12 +1,7 @@
 package com.valevoip.feature.login
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,25 +42,11 @@ internal fun LoginScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = {
-            SnackbarHost(hostState = snackBarHostState) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    actionColor = MaterialTheme.colorScheme.onErrorContainer,
-                    dismissActionContentColor = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-        },
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { _ ->
-        LoginLayout(
-            uiState = uiState,
-            onEvent = viewModel::onEvent
-        )
-    }
+    LoginLayout(
+        uiState = uiState,
+        onEvent = viewModel::onEvent,
+        snackBarHostState
+    )
 }
 
 @Preview(showSystemUi = true)
