@@ -88,15 +88,21 @@ internal fun CallLayout(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = state.contactName,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+
+            val isUnknownContact = state.contactName.isBlank() || state.contactName.equals("Desconhecido", ignoreCase = true)
+
+            if (!isUnknownContact) {
+                Text(
+                    text = state.contactName,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            
             Text(
                 text = state.contactNumber,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = if (isUnknownContact) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,
+                color = if (isUnknownContact) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.weight(0.3f))
