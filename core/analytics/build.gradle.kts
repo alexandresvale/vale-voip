@@ -12,4 +12,7 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
     api(libs.timber)
+    
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
 }
