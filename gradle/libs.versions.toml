@@ -38,6 +38,9 @@ firebase-bom = "33.1.0"
 timber = "5.0.1"
 google-services = "4.5.0"
 firebase-crashlytics-plugin = "3.0.8"
+# Security
+datastore = "1.1.1"
+tink = "1.8.0"
 
 [libraries]
 
@@ -114,6 +117,10 @@ firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.r
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+# Security
+androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
+tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
