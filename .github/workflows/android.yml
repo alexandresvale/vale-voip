@@ -1,19 +1,19 @@
-name: Gerar versão de teste
+name: Gerar versao de teste
 
 on:
   pull_request:
     branches: [ "main", "dev" ]
     types:
-      - labeled # Dispara quando uma label é adicionada ao PR
+      - labeled # Dispara quando uma label e adicionada ao PR
   workflow_dispatch:
 
 jobs:
   test:
-    name: Executar teste unitários.
+    name: Executar testes unitarios.
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout do Código
+      - name: Checkout do Codigo
         uses: actions/checkout@v4
 
       - name: Configurar JDK 17
@@ -23,8 +23,13 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Conceder permissão de execução para gradlew
+      - name: Conceder permissao de execucao para gradlew
         run: chmod +x gradlew
+
+      - name: Criar google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
 
       - name: Executar Testes
         run: ./gradlew test --stacktrace
@@ -33,11 +38,11 @@ jobs:
     name: Build do APK
     runs-on: ubuntu-latest
 
-    # Condição para executar apenas se a label for 'build apk test'
+    # Condicao para executar apenas se a label for 'build apk test'
     if: ${{ github.event.label.name == 'build apk test' }}
 
     steps:
-      - name: Checkout do Código
+      - name: Checkout do Codigo
         uses: actions/checkout@v4
 
       - name: Configurar JDK 17
@@ -50,8 +55,13 @@ jobs:
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v2
 
-      - name: Conceder permissão de execução para gradlew
+      - name: Conceder permissao de execucao para gradlew
         run: chmod +x gradlew
+
+      - name: Criar google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
 
       - name: Construir APK
         run: ./gradlew assembleDebug --stacktrace
