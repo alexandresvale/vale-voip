@@ -41,6 +41,9 @@ dependencies {
     implementation(libs.tink.android)
     implementation(libs.kotlinx.serialization.json)
 
+    // Timber
+    implementation(libs.timber)
+
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.hilt.android.testing)

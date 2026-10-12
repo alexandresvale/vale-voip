@@ -3,33 +3,39 @@ package com.valevoip.data.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStoreFile
-import com.valevoip.data.security.CryptoSerializer
-import com.valevoip.data.security.SipAccountPrefs
+import com.valevoip.data.local.datastore.SipAccountSerializer
+import com.valevoip.data.local.datastore.SipAccountPrefs
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import timber.log.Timber
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DataStoreModule {
+internal object DataStoreModule {
+    private const val SIP_ACCOUNT_FILE = "secure_sip_account.pb"
 
     @Provides
     @Singleton
-    fun provideSecureSipDataStore(
+    fun provideSipAccountDataStore(
         @ApplicationContext context: Context,
-        cryptoSerializer: CryptoSerializer,
-    ): DataStore<SipAccountPrefs> {
-        return DataStoreFactory.create(
-            serializer = cryptoSerializer,
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-            produceFile = { context.dataStoreFile("secure_sip_account.json") }
-        )
-    }
+        serializer: SipAccountSerializer,
+        @IoDispatcher ioDispatcher: CoroutineDispatcher,
+    ): DataStore<SipAccountPrefs> = DataStoreFactory.create(
+        serializer = serializer,
+        corruptionHandler = ReplaceFileCorruptionHandler { exception ->
+            Timber.e(exception, "SIP account store corrupted; resetting.")
+            SipAccountPrefs()
+        },
+        scope = CoroutineScope(ioDispatcher + SupervisorJob()),
+        produceFile = { context.dataStoreFile(SIP_ACCOUNT_FILE) }
+    )
 }

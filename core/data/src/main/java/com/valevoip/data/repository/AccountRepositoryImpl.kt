@@ -3,15 +3,15 @@ package com.valevoip.data.repository
 import androidx.datastore.core.DataStore
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.repository.AccountRepository
-import com.valevoip.data.security.SipAccountPrefs
-import kotlinx.coroutines.flow.firstOrNull
+import com.valevoip.data.local.datastore.SipAccountPrefs
+import kotlinx.coroutines.flow.first
 
 internal class AccountRepositoryImpl(
     private val dataStore: DataStore<SipAccountPrefs>
 ) : AccountRepository {
 
     override suspend fun getAccount(): SipAccount? {
-        val prefs = dataStore.data.firstOrNull() ?: return null
+        val prefs = dataStore.data.first()
 
         if (prefs.username.isEmpty()) return null
 

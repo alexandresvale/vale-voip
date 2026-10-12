@@ -3,7 +3,7 @@ package com.valevoip.data.di
 import androidx.datastore.core.DataStore
 import com.valevoip.core.domain.repository.AccountRepository
 import com.valevoip.data.repository.AccountRepositoryImpl
-import com.valevoip.data.security.SipAccountPrefs
+import com.valevoip.data.local.datastore.SipAccountPrefs
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

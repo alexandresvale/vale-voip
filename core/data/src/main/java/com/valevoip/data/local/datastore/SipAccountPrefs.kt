@@ -1,4 +1,4 @@
-package com.valevoip.data.security
+package com.valevoip.data.local.datastore
 
 import kotlinx.serialization.Serializable
 
