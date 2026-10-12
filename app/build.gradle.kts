@@ -142,11 +142,6 @@ dependencies {
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.androidx.ui.text.google.fonts)
 
-    // Room
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
-
     // Linphone SDK
 //    debugImplementation(libs.linphone.debug)
     implementation(libs.linphone.release)
