@@ -31,9 +31,13 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
 
+    // Security
     implementation(libs.androidx.datastore)
     implementation(libs.tink.android)
     implementation(libs.kotlinx.serialization.json)
+
+    // Timber
+    implementation(libs.timber)
 
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)

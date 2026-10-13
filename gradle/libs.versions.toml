@@ -30,10 +30,15 @@ ui-text-google-fonts = "1.7.8"
 jetbrains-kotlin-jvm = "2.1.0"
 javaxInject = "1"
 # Linphone Version 5.5.13
-linphone  =  "5.5.13"
+linphone = "5.5.13"
 # MockK
 mockk = "1.13.10"
-# Secure account storage
+# Firebase
+firebase-bom = "33.1.0"
+timber = "5.0.1"
+google-services = "4.5.0"
+firebase-crashlytics-plugin = "3.0.8"
+# Security
 datastore = "1.1.1"
 tink = "1.8.0"
 
@@ -76,12 +81,10 @@ linphone-debug = { group = "org.linphone", name = "linphone-sdk-android-debug", 
 media = { group = "androidx.media", name = "media", version = "1.7.0" }
 
 # Kotlin | Corountines
-kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines"}
-kotlinx-coroutines-androide = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines"}
-kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines"}
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-androide = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.7.3" }
-androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 
 # Navigation Compose
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation-compose" }
@@ -109,6 +112,16 @@ javax-inject = { group = "javax.inject", name = "javax.inject", version.ref = "j
 # MockK
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 
+# Firebase - CrashLytics
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+# Security
+androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
+tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
@@ -118,3 +131,5 @@ devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt-android" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrains-kotlin-jvm" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }

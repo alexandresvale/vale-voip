@@ -1,7 +1,6 @@
 package com.valevoip.data.di
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
@@ -17,6 +16,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import timber.log.Timber
 import javax.inject.Singleton
 
 @Module
@@ -34,7 +34,7 @@ internal object DataStoreModule {
     ): DataStore<SipAccountPrefs> = DataStoreFactory.create(
         serializer = serializer,
         corruptionHandler = ReplaceFileCorruptionHandler { exception ->
-            Log.e(TAG, "SIP account store corrupted; resetting.", exception)
+            Timber.e(exception, "SIP account store corrupted; resetting.")
             SipAccountPrefs()
         },
         scope = CoroutineScope(ioDispatcher + SupervisorJob()),
