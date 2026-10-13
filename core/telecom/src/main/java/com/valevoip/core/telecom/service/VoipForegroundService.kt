@@ -2,8 +2,10 @@ package com.valevoip.core.telecom.service
 
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.IBinder
-import android.util.Log
+import androidx.core.app.ServiceCompat
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.usecase.AnswerCallUseCase
 import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
@@ -21,6 +23,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -61,11 +64,11 @@ class VoipForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        logEvent("Service criado")
+        Timber.d("Service criado")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        logEvent("onStartCommand action=${intent?.action}")
+        Timber.d("onStartCommand action=${intent?.action}")
 
         when (intent?.action) {
             ACTION_START_MONITORING -> startMonitoring()
@@ -79,31 +82,43 @@ class VoipForegroundService : Service() {
 
     private fun startMonitoring() {
         if (isCallActive) {
-            logEvent("START_MONITORING ignorado: chamada em andamento")
+            Timber.d("START_MONITORING ignorado: chamada em andamento")
             ensureObserverIsRunning()
             return
         }
 
-        logEvent("Iniciando notificação persistente (Online)")
+        Timber.d("Iniciando notificação persistente (Online)")
         val onlineNotification = notificationManager.buildOnlineNotification()
-        startForeground(VoipNotificationManager.SERVICE_NOTIFICATION_ID, onlineNotification)
+        val serviceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+        } else {
+            0
+        }
+
+        ServiceCompat.startForeground(
+            this,
+            VoipNotificationManager.SERVICE_NOTIFICATION_ID,
+            onlineNotification,
+            serviceType
+        )
+
         ensureObserverIsRunning()
     }
 
     private fun ensureObserverIsRunning() {
         if (observerJob?.isActive == true) {
-            logEvent("Observer já está rodando")
+            Timber.d("Observer já está rodando")
             return
         }
 
-        logEvent("Iniciando novo observer de estado de chamada")
+        Timber.d("Iniciando novo observer de estado de chamada")
         observerJob = observeCallStateUseCase()
             .onEach { status -> handleCallStatusChange(status) }
             .launchIn(serviceScope)
     }
 
     private fun handleCallStatusChange(status: CallStatus) {
-        logEvent("Status recebido: $status")
+        Timber.d("Status recebido: $status")
 
         when (status) {
             CallStatus.ENDED, CallStatus.IDLE -> {
@@ -141,7 +156,7 @@ class VoipForegroundService : Service() {
 
     private fun showCallNotification(isIncoming: Boolean) {
         val number = getCurrentCallNumberUseCase()
-        logEvent("Exibindo notificação de chamada para $number (incoming=$isIncoming)")
+        Timber.d("Exibindo notificação de chamada para $number (incoming=$isIncoming)")
         notificationManager.showCallNotification(
             contactName = number,
             isIncoming = isIncoming,
@@ -151,14 +166,14 @@ class VoipForegroundService : Service() {
 
     private fun performHangup() {
         serviceScope.launch {
-            logEvent("performHangup")
+            Timber.d("performHangup")
             hangUpUseCase()
         }
     }
 
     private fun performAnswer() {
         serviceScope.launch {
-            logEvent("performAnswer")
+            Timber.d("performAnswer")
             answerCallUseCase()
         }
     }
@@ -169,10 +184,6 @@ class VoipForegroundService : Service() {
         serviceScope.cancel()
         notificationManager.cancelAll()
         wakeLockManager.release()
-        logEvent("Service destruído")
-    }
-
-    private fun logEvent(message: String) {
-        Log.d(TAG, "VoipForegroundService | $message")
+        Timber.d("Service destruído")
     }
 }

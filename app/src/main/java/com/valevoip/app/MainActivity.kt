@@ -10,6 +10,8 @@ import com.valevoip.app.navigation.AppNavHost
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
 import com.valevoip.core.navigation.NavigationCommandBus
 import dagger.hilt.android.AndroidEntryPoint
+import timber.log.Timber
+
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -27,6 +29,7 @@ class MainActivity : ComponentActivity() {
                 AppNavHost(navigationCommandBus = navigationCommandBus)
             }
         }
+        Timber.i("Aplicativo iniciado")
     }
 
     override fun onNewIntent(intent: Intent) {
