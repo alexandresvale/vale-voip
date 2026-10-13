@@ -5,8 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStoreFile
-import com.valevoip.data.local.datastore.SipAccountSerializer
+import com.valevoip.core.domain.di.IoDispatcher
 import com.valevoip.data.local.datastore.SipAccountPrefs
+import com.valevoip.data.local.datastore.SipAccountSerializer
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,13 +23,14 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 internal object DataStoreModule {
     private const val SIP_ACCOUNT_FILE = "secure_sip_account.pb"
+    private const val TAG = "DataStoreModule"
 
     @Provides
     @Singleton
     fun provideSipAccountDataStore(
         @ApplicationContext context: Context,
         serializer: SipAccountSerializer,
-        @IoDispatcher ioDispatcher: CoroutineDispatcher,
+        @IoDispatcher ioDispatcher: CoroutineDispatcher
     ): DataStore<SipAccountPrefs> = DataStoreFactory.create(
         serializer = serializer,
         corruptionHandler = ReplaceFileCorruptionHandler { exception ->

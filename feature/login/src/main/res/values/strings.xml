@@ -6,5 +6,9 @@
     <string name="vale_voip_login_username_aux">user@dominio.com</string>
     <string name="vale_voip_login_password_hint">Senha</string>
     <string name="vale_voip_login_port_hint">Domínio</string>
+    <string name="vale_voip_login_transport_label">Transporte SIP</string>
+    <string name="vale_voip_login_transport_tcp">TCP (compatível; sem criptografia)</string>
+    <string name="vale_voip_login_transport_tls">TLS (sinalização criptografada)</string>
+    <string name="vale_voip_login_transport_security_note">TLS só funciona se o servidor oferecer SIP/TLS. Certificado e nome do servidor serão validados.</string>
     <string name="vale_voip_login_start_button">Iniciar</string>
 </resources>
