@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 android {
@@ -100,6 +102,7 @@ dependencies {
     implementation(project(":core:telecom"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:navigation"))
+    implementation(project(":core:analytics"))
 
     // Nossas Features!
     implementation(project(":feature:splash"))
@@ -138,11 +141,6 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.androidx.ui.text.google.fonts)
-
-    // Room
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
 
     // Linphone SDK
 //    debugImplementation(libs.linphone.debug)

@@ -39,16 +39,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
-
-        <!-- Registra nosso aplicativo como capacitado para processar chamadas VoIP nativas -->
-        <service
-            android:name="com.valevoip.core.telecom.ValeConnectionService"
-            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.telecom.ConnectionService" />
-            </intent-filter>
-        </service>
     </application>
 
 </manifest>

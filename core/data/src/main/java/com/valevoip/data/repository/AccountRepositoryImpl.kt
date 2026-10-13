@@ -1,18 +1,38 @@
 package com.valevoip.data.repository
 
-import com.valevoip.data.local.dao.AccountDao
-import com.valevoip.data.local.mapper.toData
-import com.valevoip.data.local.mapper.toDomain
+import androidx.datastore.core.DataStore
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.repository.AccountRepository
+import com.valevoip.data.local.datastore.SipAccountPrefs
+import kotlinx.coroutines.flow.first
 
 internal class AccountRepositoryImpl(
-    private val accountDao: AccountDao
+    private val dataStore: DataStore<SipAccountPrefs>
 ) : AccountRepository {
 
-    override suspend fun getAccount(): SipAccount? = accountDao.getAccount()?.toDomain()
+    override suspend fun getAccount(): SipAccount? {
+        val prefs = dataStore.data.first()
 
-    override suspend fun insertAccount(sipAccount: SipAccount) = accountDao.insertAccount(sipAccount.toData())
+        if (prefs.username.isEmpty()) return null
 
-    override suspend fun clearAccount() = accountDao.clearAccount()
+        return SipAccount(
+            username = prefs.username,
+            password = prefs.password,
+            domain = prefs.domain
+        )
+    }
+
+    override suspend fun insertAccount(sipAccount: SipAccount) {
+        dataStore.updateData { currentPrefs ->
+            currentPrefs.copy(
+                username = sipAccount.username,
+                password = sipAccount.password,
+                domain = sipAccount.domain
+            )
+        }
+    }
+
+    override suspend fun clearAccount() {
+        dataStore.updateData { SipAccountPrefs() }
+    }
 }

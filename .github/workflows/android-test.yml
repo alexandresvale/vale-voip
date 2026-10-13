@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Executar teste unitários.
+    name: Executar testes
     runs-on: ubuntu-latest
 
     steps:
@@ -23,8 +23,13 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Conceder permissão de execução para gradlew
+      - name: Conceder permissao de execucao para gradlew
         run: chmod +x gradlew
 
-      - name: Executar Testes unitários
+      - name: Criar google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
+
+      - name: Executar Testes unitarios
         run: ./gradlew clean testDebug
