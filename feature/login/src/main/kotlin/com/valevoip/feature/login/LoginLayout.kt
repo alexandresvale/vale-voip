@@ -1,10 +1,12 @@
 package com.valevoip.feature.login
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -25,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -39,6 +43,7 @@ import com.valevoip.core.designsystem.component.ValeVoipTextField
 import com.valevoip.core.designsystem.theme.AppTypography
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
 import com.valevoip.core.designsystem.R as DesignR
+import com.valevoip.core.domain.model.SipTransport
 
 @Composable
 internal fun LoginLayout(
@@ -165,6 +170,51 @@ internal fun LoginContent(
                         onEvent(LoginUiEvent.OnRegisterClick)
                     }
                 )
+            )
+
+            Text(
+                text = stringResource(R.string.vale_voip_login_transport_label),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp)
+            )
+
+            SipTransport.entries.forEach { transport ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = uiState.transport == transport,
+                            onClick = { onEvent(LoginUiEvent.OnTransportChange(transport)) },
+                            enabled = !isLoading,
+                            role = Role.RadioButton
+                        )
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = uiState.transport == transport,
+                        onClick = null,
+                        enabled = !isLoading
+                    )
+                    Text(
+                        text = stringResource(
+                            when (transport) {
+                                SipTransport.TCP -> R.string.vale_voip_login_transport_tcp
+                                SipTransport.TLS -> R.string.vale_voip_login_transport_tls
+                            }
+                        ),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.vale_voip_login_transport_security_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(24.dp))

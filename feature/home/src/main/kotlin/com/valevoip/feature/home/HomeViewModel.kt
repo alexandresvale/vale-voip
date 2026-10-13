@@ -40,7 +40,7 @@ internal class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val account = getAccountUseCase()
             if (account != null) {
-                registerAccountUseCase(account.username, account.password, account.domain)
+                registerAccountUseCase(account.username, account.password, account.domain, account.transport)
             }
         }
     }

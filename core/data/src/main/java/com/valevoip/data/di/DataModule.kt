@@ -1,7 +1,8 @@
 package com.valevoip.data.di
 
+import androidx.datastore.core.DataStore
 import com.valevoip.core.domain.repository.AccountRepository
-import com.valevoip.data.local.dao.AccountDao
+import com.valevoip.data.local.datastore.SipAccountPrefs
 import com.valevoip.data.repository.AccountRepositoryImpl
 import dagger.Module
 import dagger.Provides
@@ -13,12 +14,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DataModule {
 
-    // O SipClient será provido pelo core:sip agora
-
     @Provides
     @Singleton
-    fun provideAccountRepository(accountDao: AccountDao): AccountRepository {
-        return AccountRepositoryImpl(accountDao)
+    fun provideAccountRepository(dataStore: DataStore<SipAccountPrefs>): AccountRepository {
+        return AccountRepositoryImpl(dataStore)
     }
-
 }

@@ -3,6 +3,7 @@ package com.valevoip.core.domain.usecase
 import com.valevoip.core.domain.client.SipClient
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
+import com.valevoip.core.domain.model.SipTransport
 import com.valevoip.core.domain.repository.AccountRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
@@ -43,7 +44,8 @@ class RegisterAccountUseCase @Inject constructor(
     suspend operator fun invoke(
         username: String,
         password: String,
-        domain: String
+        domain: String,
+        transport: SipTransport = SipTransport.TCP
     ): RegisterResult {
         // 1. Regra de Negócio: Validação Rígida
         if (username.isBlank()) return RegisterResult.Error(RegisterError.EmptyUsername)
@@ -55,7 +57,8 @@ class RegisterAccountUseCase @Inject constructor(
         val account = SipAccount(
             username = username.trim(),
             password = password.trim(),
-            domain = domain.trim()
+            domain = domain.trim(),
+            transport = transport
         )
 
         // Se a regra passar, mandamos para o cliente SIP:

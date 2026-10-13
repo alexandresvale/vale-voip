@@ -11,4 +11,6 @@ dependencies {
     implementation(project(":core:domain"))
     implementation(libs.linphone.release)
     implementation(libs.kotlinx.coroutines.core)
+
+    testImplementation(libs.junit)
 }

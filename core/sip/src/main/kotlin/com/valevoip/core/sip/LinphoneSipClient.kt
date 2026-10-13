@@ -121,9 +121,13 @@ internal class LinphoneSipClient(
         val identify = Factory.instance().createAddress("sip:${account.username}@${account.domain}")
         accountParams.identityAddress = identify
 
-        // Define o endereço do servidor (Proxy) com o transporte forçado para TCP (ou TLS)
+        val transportConfiguration = sipTransportConfiguration(account.transport)
+        core.verifyServerCertificates(transportConfiguration.verifyServerCertificates)
+        core.verifyServerCn(transportConfiguration.verifyServerCommonName)
+
+        // Preserve TCP for legacy servers; TLS is used only when explicitly selected.
         val serverAddress = Factory.instance().createAddress("sip:${account.domain}")
-        serverAddress?.transport = org.linphone.core.TransportType.Tcp
+        serverAddress?.transport = transportConfiguration.linphoneTransport
         accountParams.serverAddress = serverAddress
         accountParams.isRegisterEnabled = true
 

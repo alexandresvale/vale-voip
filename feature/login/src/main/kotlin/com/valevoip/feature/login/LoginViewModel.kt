@@ -40,6 +40,10 @@ internal class LoginViewModel @Inject constructor(
                 it.copy(domain = event.value, domainError = null)
             }
 
+            is LoginUiEvent.OnTransportChange -> _uiState.update {
+                it.copy(transport = event.value)
+            }
+
             is LoginUiEvent.OnRegisterClick -> registerUser()
         }
     }
@@ -52,7 +56,8 @@ internal class LoginViewModel @Inject constructor(
             when (val result = registerUserUseCase(
                 username = currentState.userName,
                 password = currentState.password,
-                domain = currentState.domain
+                domain = currentState.domain,
+                transport = currentState.transport
             )) {
                 is RegisterResult.Success -> {
                     _uiState.update { it.copy(isLoading = false, userNameError = "", isConnectionError = false) }

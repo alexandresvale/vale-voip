@@ -29,6 +29,14 @@ A construção do software seguiu diretrizes rígidas de engenharia:
 - **Build System Moderno (RNF02):** Configuração com `libs.versions.toml` e *Convention Plugins* (`build-logic`).
 - **Resiliência (RNF05):** Uso inteligente de *Foreground Service* para a manutenção contínua da conexão com o PBX.
 
+## Transporte de sinalização SIP
+
+Na tela de login, escolha **TCP** ou **TLS**; a opção TCP vem selecionada para preservar compatibilidade com servidores que não oferecem TLS. TLS criptografa a sinalização SIP, e o Linphone valida tanto a cadeia do certificado quanto o nome do servidor. Não há fallback automático para TCP se a conexão TLS ou a validação falhar.
+
+Para habilitar TLS no servidor, o administrador deve ativar um listener SIP/TLS, instalar um certificado emitido por uma autoridade confiável com SAN correspondente ao domínio SIP usado no app e liberar no firewall a porta TLS configurada pelo provedor. Depois, o usuário informa esse domínio e seleciona TLS no login. Não use endereços ou portas presumidos; confirme os parâmetros com o administrador/provedor. SIP/TLS protege a sinalização, não o áudio RTP: configure SRTP separadamente se a mídia também precisar de criptografia.
+
+O [help oficial do SIP2SIP](https://sip2sip.info/help/) orienta que clientes descubram os servidores SIP por NAPTR/SRV para `sip2sip.info`, mas não confirma suporte a SIP/TLS nem sua porta. O app não fixa uma porta para esse provedor; confirme a disponibilidade de TLS antes de selecionar essa opção. Até lá, use TCP.
+
 ## 🖼️ Telas do Aplicativo
 
 Abaixo você confere o layout e conceito visual desenvolvido para o aplicativo.
