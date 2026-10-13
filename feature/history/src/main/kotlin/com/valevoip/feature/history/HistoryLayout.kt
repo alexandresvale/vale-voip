@@ -37,12 +37,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import com.valevoip.core.designsystem.extension.toFormattedDate
+import com.valevoip.core.designsystem.extension.toFormattedTime
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
 import com.valevoip.core.domain.model.CallDirection
 import com.valevoip.core.domain.model.CallHistoryItem
-import com.valevoip.core.designsystem.extension.toFormattedDate
-import com.valevoip.core.designsystem.extension.toFormattedTime
 import com.valevoip.core.domain.model.CallHistoryStatus
+
 @Composable
 internal fun HistoryLayout(
     state: HistoryUiState,
@@ -82,26 +83,24 @@ internal fun HistoryContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Histórico",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            TextButton(onClick = { onAction(HistoryUiAction.ClearHistory) }) {
-                Text(
-                    text = "Limpar",
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.Bold
-                )
+        if (state.allItems.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = { onAction(HistoryUiAction.ClearHistory) }) {
+                    Text(
+                        text = "Limpar",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
+        } else {
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
         // Search Bar
@@ -281,9 +280,6 @@ internal fun HistoryItemRow(item: CallHistoryItem, onClick: () -> Unit) {
         )
     }
 }
-
-
-
 
 
 internal class HistoryUiStateProvider : PreviewParameterProvider<HistoryUiState> {
