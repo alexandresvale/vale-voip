@@ -1,10 +1,12 @@
 package com.valevoip.feature.history
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.valevoip.core.designsystem.component.LocalTopBarActions
 
 @Composable
 internal fun HistoryScreen(
@@ -13,6 +15,20 @@ internal fun HistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
+    val topBarActions = LocalTopBarActions.current
+    val hasItems = uiState.allItems.isNotEmpty()
+
+    DisposableEffect(hasItems) {
+        topBarActions.value = {
+            HistoryOverflowMenu(
+                hasItems = hasItems,
+                onClearHistory = { viewModel.onAction(HistoryUiAction.ClearHistory) }
+            )
+        }
+        onDispose {
+            topBarActions.value = null
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.onAction(HistoryUiAction.LoadHistory)

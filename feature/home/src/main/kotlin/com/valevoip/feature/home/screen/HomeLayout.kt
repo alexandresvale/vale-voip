@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
+import com.valevoip.core.designsystem.component.LocalTopBarActions
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
 import com.valevoip.core.domain.model.SipRegistrationState
 import com.valevoip.feature.home.HomeUiState
@@ -54,10 +55,12 @@ internal fun HomeLayout(
                     )
                 },
                 actions = {
+                    val contextualActions = LocalTopBarActions.current.value
                     ConnectionStatusIndicator(
                         state = state.connectionState,
-                        modifier = Modifier.padding(end = 16.dp)
+                        modifier = Modifier.padding(end = if (contextualActions != null) 4.dp else 16.dp)
                     )
+                    contextualActions?.invoke()
                 }
             )
         },

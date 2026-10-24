@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -22,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.valevoip.core.designsystem.component.LocalTopBarActions
 import com.valevoip.core.designsystem.util.SystemBarsController
 import com.valevoip.core.navigation.navigateToBottomBarRoute
 import com.valevoip.core.telecom.service.VoipForegroundService
@@ -76,25 +80,29 @@ internal fun HomeScreen(
         }
     }
 
-    HomeLayout(
-        state = state,
-        currentDestination = currentDestination,
-        onBottomItemClick = { screen ->
-            bottomNavController.navigateToBottomBarRoute(screen.route)
-        },
-        content = { padding ->
-            Box(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-            ) {
-                HomeNavGraph(
-                    navController = bottomNavController,
-                    nestedGraph = nestedGraph
-                )
+    val topBarActions = remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+
+    CompositionLocalProvider(LocalTopBarActions provides topBarActions) {
+        HomeLayout(
+            state = state,
+            currentDestination = currentDestination,
+            onBottomItemClick = { screen ->
+                bottomNavController.navigateToBottomBarRoute(screen.route)
+            },
+            content = { padding ->
+                Box(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                ) {
+                    HomeNavGraph(
+                        navController = bottomNavController,
+                        nestedGraph = nestedGraph
+                    )
+                }
             }
-        }
-    )
+        )
+    }
 }
 
 private fun startMonitoringService(context: Context) {
