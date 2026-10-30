@@ -2,6 +2,7 @@ package com.valevoip.core.sip.di
 
 import android.content.Context
 import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.repository.SettingsRepository
 import com.valevoip.core.sip.LinphoneSipClient
 import dagger.Module
 import dagger.Provides
@@ -17,8 +18,9 @@ object SipModule {
     @Provides
     @Singleton
     fun provideSipClient(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        settingsRepository: SettingsRepository
     ): SipClient {
-        return LinphoneSipClient(context)
+        return LinphoneSipClient(context, settingsRepository)
     }
 }

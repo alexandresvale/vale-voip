@@ -21,9 +21,6 @@ interface SipClient {
     /**
      * Desconecta do servidor
      */
-//    suspend fun unregister()
-
-    //    suspend fun registerUser(username: String, password: String, domain: String): Flow<SipRegistrationState>
     suspend fun unregister(): Flow<SipRegistrationState>
     fun makeCall(number: String): Result<Unit>
     fun hangUp(): Result<Unit>
@@ -37,4 +34,9 @@ interface SipClient {
     fun getCallLogs(): Result<List<CallHistoryItem>>
     fun deleteCallLog(id: String): Result<Unit>
     fun clearCallLogs(): Result<Unit>
+
+    fun startEchoTester(): Result<Unit>
+    fun stopEchoTester(): Result<Unit>
+    fun isEchoTesterRunning(): Boolean
+    fun getLinphoneVersion(): String
 }
