@@ -14,6 +14,7 @@ import com.valevoip.core.navigation.route.HomeGraphRoute
 import com.valevoip.core.navigation.route.LoginRoute
 import com.valevoip.core.navigation.route.SplashRoute
 import com.valevoip.feature.call.callScreen
+import com.valevoip.feature.config.configScreen
 import com.valevoip.feature.dialer.dialerScreen
 import com.valevoip.feature.history.historyScreen
 import com.valevoip.feature.home.mainGraph
@@ -102,7 +103,7 @@ fun AppNavHost(navigationCommandBus: NavigationCommandBus) {
             }
         )
 
-        // 3. Módulo Home (Scaffold com as abas de Dialer e History)
+        // 3. Módulo Home (Scaffold com as abas de Dialer, History e Settings)
         mainGraph(
             onNavigateToCall = { number ->
                 navController.navigate(CallRoute(number)) {
@@ -121,6 +122,8 @@ fun AppNavHost(navigationCommandBus: NavigationCommandBus) {
                         navController.navigate(CallRoute(number))
                     }
                 )
+
+                configScreen()
             }
         )
 
