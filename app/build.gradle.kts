@@ -111,6 +111,7 @@ dependencies {
     implementation(project(":feature:call"))
     implementation(project(":feature:dialer"))
     implementation(project(":feature:history"))
+    implementation(project(":feature:config"))
 
     // Kotlin
     implementation(libs.kotlinx.serialization.json)
