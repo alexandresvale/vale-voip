@@ -12,11 +12,21 @@ import com.valevoip.core.domain.model.CallHistoryStatus
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
+import com.valevoip.core.domain.client.NetworkConnectivityProvider
+import com.valevoip.core.domain.repository.SettingsRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import org.linphone.core.AudioDevice
 import org.linphone.core.Core
 import org.linphone.core.CoreListenerStub
@@ -25,7 +35,10 @@ import org.linphone.core.LogLevel
 import org.linphone.core.RegistrationState
 
 internal class LinphoneSipClient(
-    private val context: Context
+    private val context: Context,
+    private val settingsRepository: SettingsRepository,
+    private val networkConnectivityProvider: NetworkConnectivityProvider,
+    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) : SipClient {
 
     private val _registrationState = MutableStateFlow<SipRegistrationState>(SipRegistrationState.None)
@@ -44,7 +57,6 @@ internal class LinphoneSipClient(
 
         linphoneCore = factory.createCore(null, null, context)
 
-        linphoneCore?.isEchoCancellationEnabled = true
         linphoneCore?.disableRecordOnMute = true
 
         val natPolicy = linphoneCore?.createNatPolicy()
@@ -105,6 +117,43 @@ internal class LinphoneSipClient(
                 }
             }
         })
+
+        observeSettings()
+    }
+
+    private fun observeSettings() {
+        // Sincroniza cancelamento e limitador de eco
+        settingsRepository.settings
+            .map { it.echoCancellationEnabled }
+            .distinctUntilChanged()
+            .onEach { enabled ->
+                linphoneCore?.let { core ->
+                    core.isEchoCancellationEnabled = enabled
+                    core.isEchoLimiterEnabled = enabled
+                }
+            }
+            .launchIn(coroutineScope)
+
+        // Sincroniza alcance de rede com a política 'Usar Somente Wi-Fi'
+        combine(
+            settingsRepository.settings.map { it.useWifiOnly }.distinctUntilChanged(),
+            networkConnectivityProvider.connectivityState
+        ) { useWifiOnly, netState ->
+            val reachable = if (useWifiOnly) {
+                netState.isConnected && netState.isWifi
+            } else {
+                netState.isConnected
+            }
+            reachable
+        }
+            .distinctUntilChanged()
+            .onEach { reachable ->
+                linphoneCore?.let { core ->
+                    Log.d("LinphoneSipClient", "Sincronizando conectividade com Core: isNetworkReachable = $reachable")
+                    core.isNetworkReachable = reachable
+                }
+            }
+            .launchIn(coroutineScope)
     }
 
     override suspend fun register(account: SipAccount): Flow<SipRegistrationState> {
@@ -318,6 +367,55 @@ internal class LinphoneSipClient(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private var isEchoTesting: Boolean = false
+
+    override fun startEchoTester(): Result<Unit> {
+        return try {
+            val core = linphoneCore ?: return Result.failure(IllegalStateException("LinphoneCore não inicializado"))
+
+            // Boas práticas Linphone: Não iniciar teste durante chamadas ativas
+            if (core.currentCall != null || core.callsNb > 0) {
+                return Result.failure(IllegalStateException("Não é possível testar áudio durante uma chamada ativa"))
+            }
+
+            if (!isEchoTesting) {
+                // Altera o modo do AudioManager para habilitar o pipeline acústico de comunicação
+                audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                val result = core.startEchoTester(16000)
+                if (result != 0) {
+                    audioManager.mode = AudioManager.MODE_NORMAL
+                    return Result.failure(IllegalStateException("Falha ao iniciar teste de áudio no Linphone (código: $result)"))
+                }
+                isEchoTesting = true
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            audioManager.mode = AudioManager.MODE_NORMAL
+            Result.failure(e)
+        }
+    }
+
+    override fun stopEchoTester(): Result<Unit> {
+        return try {
+            val core = linphoneCore ?: return Result.failure(IllegalStateException("LinphoneCore não inicializado"))
+            if (isEchoTesting) {
+                core.stopEchoTester()
+                isEchoTesting = false
+                audioManager.mode = AudioManager.MODE_NORMAL
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            audioManager.mode = AudioManager.MODE_NORMAL
+            Result.failure(e)
+        }
+    }
+
+    override fun isEchoTesterRunning(): Boolean = isEchoTesting
+
+    override fun getLinphoneVersion(): String {
+        return linphoneCore?.version ?: "Desconhecido"
     }
 
     override fun clearCallLogs(): Result<Unit> {

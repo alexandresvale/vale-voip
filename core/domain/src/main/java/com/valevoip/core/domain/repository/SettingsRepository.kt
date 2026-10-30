@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {
     val settings: Flow<VoipSettings>
+    val currentSettings: VoipSettings
     suspend fun setEchoCancellation(enabled: Boolean)
     suspend fun setVibrate(enabled: Boolean)
     suspend fun setWifiOnly(enabled: Boolean)

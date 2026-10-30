@@ -11,9 +11,11 @@ import com.valevoip.core.domain.usecase.AnswerCallUseCase
 import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
+import com.valevoip.core.domain.usecase.ObserveVoipSettingsUseCase
 import com.valevoip.core.navigation.NavigationCommand
 import com.valevoip.core.navigation.NavigationCommandBus
 import com.valevoip.core.telecom.notification.VoipNotificationManager
+import com.valevoip.core.telecom.vibration.VoipVibratorManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,9 +52,17 @@ class VoipForegroundService : Service() {
     @Inject
     lateinit var wakeLockManager: ProximityWakeLockManager
 
+    @Inject
+    lateinit var vibratorManager: VoipVibratorManager
+
+    @Inject
+    lateinit var observeVoipSettingsUseCase: ObserveVoipSettingsUseCase
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var observerJob: Job? = null
+    private var settingsObserverJob: Job? = null
     private var isCallActive: Boolean = false
+    private var vibrateOnIncomingCall: Boolean = true
 
     companion object {
         const val ACTION_START_MONITORING = "ACTION_START_MONITORING"
@@ -106,6 +116,15 @@ class VoipForegroundService : Service() {
     }
 
     private fun ensureObserverIsRunning() {
+        if (settingsObserverJob?.isActive != true) {
+            settingsObserverJob = observeVoipSettingsUseCase()
+                .onEach { settings ->
+                    vibrateOnIncomingCall = settings.vibrateOnIncomingCall
+                    Timber.d("Configuração de vibração atualizada: $vibrateOnIncomingCall")
+                }
+                .launchIn(serviceScope)
+        }
+
         if (observerJob?.isActive == true) {
             Timber.d("Observer já está rodando")
             return
@@ -123,12 +142,16 @@ class VoipForegroundService : Service() {
         when (status) {
             CallStatus.ENDED, CallStatus.IDLE -> {
                 isCallActive = false
+                vibratorManager.stopVibration()
                 notificationManager.dismissCallNotification()
                 wakeLockManager.release()
             }
 
             CallStatus.INCOMING -> {
                 isCallActive = true
+                if (vibrateOnIncomingCall) {
+                    vibratorManager.startRingingVibration()
+                }
                 val number = getCurrentCallNumberUseCase() ?: ""
                 showCallNotification(isIncoming = true)
                 wakeLockManager.acquire()
@@ -142,12 +165,14 @@ class VoipForegroundService : Service() {
 
             CallStatus.DIALING, CallStatus.RINGING -> {
                 isCallActive = true
+                vibratorManager.stopVibration()
                 showCallNotification(isIncoming = false)
                 wakeLockManager.acquire()
             }
 
             CallStatus.ACTIVE -> {
                 isCallActive = true
+                vibratorManager.stopVibration()
                 showCallNotification(isIncoming = false)
                 wakeLockManager.acquire()
             }
@@ -180,6 +205,7 @@ class VoipForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        vibratorManager.stopVibration()
         stopForeground(STOP_FOREGROUND_REMOVE)
         serviceScope.cancel()
         notificationManager.cancelAll()

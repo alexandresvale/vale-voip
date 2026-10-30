@@ -1,6 +1,7 @@
 package com.valevoip.core.sip.di
 
 import android.content.Context
+import com.valevoip.core.domain.client.NetworkConnectivityProvider
 import com.valevoip.core.domain.client.SipClient
 import com.valevoip.core.domain.repository.SettingsRepository
 import com.valevoip.core.sip.LinphoneSipClient
@@ -19,8 +20,9 @@ object SipModule {
     @Singleton
     fun provideSipClient(
         @ApplicationContext context: Context,
-        settingsRepository: SettingsRepository
+        settingsRepository: SettingsRepository,
+        networkConnectivityProvider: NetworkConnectivityProvider
     ): SipClient {
-        return LinphoneSipClient(context, settingsRepository)
+        return LinphoneSipClient(context, settingsRepository, networkConnectivityProvider)
     }
 }
