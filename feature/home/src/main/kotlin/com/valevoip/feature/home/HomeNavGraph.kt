@@ -2,17 +2,12 @@ package com.valevoip.feature.home
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import com.valevoip.core.navigation.NAV_ANIMATION_DURATION_MS
 import com.valevoip.core.navigation.route.DialerRoute
 import com.valevoip.core.navigation.route.HistoryRoute
@@ -49,9 +44,6 @@ fun HomeNavGraph(
         }
     ) {
         nestedGraph()
-        composable<SettingsRoute> {
-            Box(Modifier.fillMaxSize()) { Text("Configurações") }
-        }
     }
 }
 
