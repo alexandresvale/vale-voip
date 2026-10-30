@@ -251,7 +251,11 @@ val LocalExtendedColors = staticCompositionLocalOf {
         redBg = Color.Unspecified,
         redFg = Color.Unspecified,
         orange = Color.Unspecified,
-        purple = Color.Unspecified
+        orangeBg = Color.Unspecified,
+        orangeFg = Color.Unspecified,
+        purple = Color.Unspecified,
+        cardBackground = Color.Unspecified,
+        cardBorder = Color.Unspecified
     )
 }
 
@@ -263,8 +267,12 @@ val extendedLightColors = ValeVoipExtendedColors(
     blueFg = blueFgLight,
     redBg = redBgLight,
     redFg = redFgLight,
-    orange = orange,
-    purple = purple
+    orange = orangeLight,
+    orangeBg = orangeBgLight,
+    orangeFg = orangeFgLight,
+    purple = purple,
+    cardBackground = Color.White,
+    cardBorder = cardBorderLight
 )
 
 val extendedDarkColors = ValeVoipExtendedColors(
@@ -275,8 +283,12 @@ val extendedDarkColors = ValeVoipExtendedColors(
     blueFg = blueFgDark,
     redBg = redBgDark,
     redFg = redFgDark,
-    orange = orange,
-    purple = purple
+    orange = orangeDark,
+    orangeBg = orangeBgDark,
+    orangeFg = orangeFgDark,
+    purple = purple,
+    cardBackground = surfaceContainerDark,
+    cardBorder = cardBorderDark
 )
 
 @Composable
