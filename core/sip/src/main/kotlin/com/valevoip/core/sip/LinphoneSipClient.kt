@@ -6,6 +6,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.util.Log
 import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.di.IoDispatcher
 import com.valevoip.core.domain.model.CallDirection
 import com.valevoip.core.domain.model.CallHistoryItem
 import com.valevoip.core.domain.model.CallHistoryStatus
@@ -13,7 +14,9 @@ import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
 import com.valevoip.core.domain.client.NetworkConnectivityProvider
+import com.valevoip.core.domain.repository.CallHistoryRepository
 import com.valevoip.core.domain.repository.SettingsRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,7 +30,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withContext
 import org.linphone.core.AudioDevice
+import org.linphone.core.Call
 import org.linphone.core.Core
 import org.linphone.core.CoreListenerStub
 import org.linphone.core.Factory
@@ -38,8 +43,9 @@ internal class LinphoneSipClient(
     private val context: Context,
     private val settingsRepository: SettingsRepository,
     private val networkConnectivityProvider: NetworkConnectivityProvider,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-) : SipClient {
+) : SipClient, CallHistoryRepository {
 
     private val _registrationState = MutableStateFlow<SipRegistrationState>(SipRegistrationState.None)
     override val registrationState: StateFlow<SipRegistrationState> = _registrationState.asStateFlow()
@@ -323,19 +329,23 @@ internal class LinphoneSipClient(
 
     override fun getSynchronousCallStatus(): CallStatus = _callStatus.value
 
-    override fun getCallLogs(): Result<List<CallHistoryItem>> {
-        return try {
-            val logs = linphoneCore?.callLogs ?: return Result.success(emptyList())
+    override fun getLinphoneVersion(): String {
+        return linphoneCore?.version ?: "Desconhecido"
+    }
+
+    override suspend fun getCallHistory(): Result<List<CallHistoryItem>> = withContext(ioDispatcher) {
+        try {
+            val logs = linphoneCore?.callLogs ?: return@withContext Result.success(emptyList())
             val mapped = logs.map { log ->
                 val direction = when (log.dir) {
-                    org.linphone.core.Call.Dir.Incoming -> CallDirection.INCOMING
+                    Call.Dir.Incoming -> CallDirection.INCOMING
                     else -> CallDirection.OUTGOING
                 }
 
                 val status = when (log.status) {
-                    org.linphone.core.Call.Status.Missed -> CallHistoryStatus.MISSED
-                    org.linphone.core.Call.Status.Declined,
-                    org.linphone.core.Call.Status.Aborted -> CallHistoryStatus.DECLINED
+                    Call.Status.Missed -> CallHistoryStatus.MISSED
+                    Call.Status.Declined,
+                    Call.Status.Aborted -> CallHistoryStatus.DECLINED
                     else -> CallHistoryStatus.SUCCESS
                 }
 
@@ -355,71 +365,22 @@ internal class LinphoneSipClient(
         }
     }
 
-        override fun deleteCallLog(id: String): Result<Unit> {
-        return try {
+    override suspend fun deleteCallHistoryItem(id: String): Result<Unit> = withContext(ioDispatcher) {
+        try {
             val logToRemove = linphoneCore?.callLogs?.find { it.callId == id }
             if (logToRemove != null) {
                 linphoneCore?.removeCallLog(logToRemove)
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Call log not found"))
+                Result.failure(NoSuchElementException("Call log com ID '$id' não encontrado"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    private var isEchoTesting: Boolean = false
-
-    override fun startEchoTester(): Result<Unit> {
-        return try {
-            val core = linphoneCore ?: return Result.failure(IllegalStateException("LinphoneCore não inicializado"))
-
-            // Boas práticas Linphone: Não iniciar teste durante chamadas ativas
-            if (core.currentCall != null || core.callsNb > 0) {
-                return Result.failure(IllegalStateException("Não é possível testar áudio durante uma chamada ativa"))
-            }
-
-            if (!isEchoTesting) {
-                // Altera o modo do AudioManager para habilitar o pipeline acústico de comunicação
-                audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-                val result = core.startEchoTester(16000)
-                if (result != 0) {
-                    audioManager.mode = AudioManager.MODE_NORMAL
-                    return Result.failure(IllegalStateException("Falha ao iniciar teste de áudio no Linphone (código: $result)"))
-                }
-                isEchoTesting = true
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            audioManager.mode = AudioManager.MODE_NORMAL
-            Result.failure(e)
-        }
-    }
-
-    override fun stopEchoTester(): Result<Unit> {
-        return try {
-            val core = linphoneCore ?: return Result.failure(IllegalStateException("LinphoneCore não inicializado"))
-            if (isEchoTesting) {
-                core.stopEchoTester()
-                isEchoTesting = false
-                audioManager.mode = AudioManager.MODE_NORMAL
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            audioManager.mode = AudioManager.MODE_NORMAL
-            Result.failure(e)
-        }
-    }
-
-    override fun isEchoTesterRunning(): Boolean = isEchoTesting
-
-    override fun getLinphoneVersion(): String {
-        return linphoneCore?.version ?: "Desconhecido"
-    }
-
-    override fun clearCallLogs(): Result<Unit> {
-        return try {
+    override suspend fun clearCallHistory(): Result<Unit> = withContext(ioDispatcher) {
+        try {
             linphoneCore?.clearCallLogs()
             Result.success(Unit)
         } catch (e: Exception) {
