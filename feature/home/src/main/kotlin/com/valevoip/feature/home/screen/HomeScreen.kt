@@ -2,7 +2,6 @@ package com.valevoip.feature.home.screen
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -106,8 +105,5 @@ internal fun HomeScreen(
 }
 
 private fun startMonitoringService(context: Context) {
-    val intent = Intent(context, VoipForegroundService::class.java).apply {
-        action = VoipForegroundService.ACTION_START_MONITORING
-    }
-    context.startForegroundService(intent)
+    VoipForegroundService.start(context)
 }

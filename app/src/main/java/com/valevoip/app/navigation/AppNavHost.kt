@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.valevoip.core.navigation.NAV_ANIMATION_DURATION_MS
@@ -13,6 +14,7 @@ import com.valevoip.core.navigation.route.CallRoute
 import com.valevoip.core.navigation.route.HomeGraphRoute
 import com.valevoip.core.navigation.route.LoginRoute
 import com.valevoip.core.navigation.route.SplashRoute
+import com.valevoip.core.telecom.service.VoipForegroundService
 import com.valevoip.feature.call.callScreen
 import com.valevoip.feature.config.configScreen
 import com.valevoip.feature.dialer.dialerScreen
@@ -35,6 +37,7 @@ import com.valevoip.feature.splash.splashScreen
 @Composable
 fun AppNavHost(navigationCommandBus: NavigationCommandBus) {
     val navController = rememberNavController()
+    val context = LocalContext.current
 
     LaunchedEffect(navController) {
         navigationCommandBus.commands.collect { command ->
@@ -123,7 +126,14 @@ fun AppNavHost(navigationCommandBus: NavigationCommandBus) {
                     }
                 )
 
-                configScreen()
+                configScreen(
+                    onNavigateToLogin = {
+                        VoipForegroundService.stop(context)
+                        navController.navigate(LoginRoute) {
+                            popUpTo(HomeGraphRoute) { inclusive = true }
+                        }
+                    }
+                )
             }
         )
 
