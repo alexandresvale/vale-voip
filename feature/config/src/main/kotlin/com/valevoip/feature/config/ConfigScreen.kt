@@ -29,8 +29,14 @@ internal fun ConfigScreen(
                         putExtra(Intent.EXTRA_TEXT, effect.report)
                         putExtra(Intent.EXTRA_SUBJECT, "Diagnóstico de Suporte VoIP")
                     }
-                    val chooserIntent = Intent.createChooser(sendIntent, "Compartilhar Diagnóstico")
-                    context.startActivity(chooserIntent)
+                    val chooserIntent = Intent.createChooser(sendIntent, "Compartilhar Diagnóstico").apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    try {
+                        context.startActivity(chooserIntent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Não foi possível abrir o compartilhador", Toast.LENGTH_SHORT).show()
+                    }
                 }
 
                 is ConfigUiEffect.ShowToast -> {

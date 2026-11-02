@@ -106,20 +106,6 @@ internal fun ConfigLayout(
                     checked = state.settings.vibrateOnIncomingCall,
                     onCheckedChange = { onAction(ConfigUiAction.SetVibrate(it)) }
                 )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 68.dp),
-                    color = ValeVoipTheme.extendedColors.cardBorder
-                )
-
-                SettingsActionRow(
-                    icon = Icons.Default.Mic,
-                    iconBgColor = MaterialTheme.colorScheme.primary,
-                    iconTint = MaterialTheme.colorScheme.onPrimary,
-                    title = "Testar Microfone e Alto-falante",
-                    subtitle = "Grave sua voz e escute para validar o áudio",
-                    onClick = { onAction(ConfigUiAction.OpenAudioTest) }
-                )
             }
         }
 
@@ -201,15 +187,7 @@ internal fun ConfigLayout(
         )
     }
 
-    // BottomSheet para Teste de Microfone e Alto-falante
-    if (state.showAudioTestBottomSheet) {
-        AudioTestBottomSheet(
-            isTesting = state.isTestingAudio,
-            onStartTest = { onAction(ConfigUiAction.StartAudioTest) },
-            onStopTest = { onAction(ConfigUiAction.StopAudioTest) },
-            onDismiss = { onAction(ConfigUiAction.CloseAudioTest) }
-        )
-    }
+
 }
 
 @Composable
