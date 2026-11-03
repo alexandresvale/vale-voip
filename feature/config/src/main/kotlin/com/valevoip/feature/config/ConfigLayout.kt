@@ -21,10 +21,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Warning
@@ -120,15 +121,52 @@ internal fun ConfigLayout(
             colors = CardDefaults.cardColors(containerColor = ValeVoipTheme.extendedColors.cardBackground),
             border = BorderStroke(1.dp, ValeVoipTheme.extendedColors.cardBorder)
         ) {
-            SettingsSwitchRow(
-                icon = Icons.Default.Wifi,
-                iconBgColor = ValeVoipTheme.extendedColors.blueBg,
-                iconTint = ValeVoipTheme.extendedColors.blueFg,
-                title = "Usar Apenas Wi-Fi",
-                subtitle = "Restringe chamadas para economizar dados móveis",
-                checked = state.settings.useWifiOnly,
-                onCheckedChange = { onAction(ConfigUiAction.SetWifiOnly(it)) }
-            )
+            Column {
+                SettingsSwitchRow(
+                    icon = Icons.Default.Wifi,
+                    iconBgColor = ValeVoipTheme.extendedColors.blueBg,
+                    iconTint = ValeVoipTheme.extendedColors.blueFg,
+                    title = "Usar Apenas Wi-Fi",
+                    subtitle = "Restringe chamadas para economizar dados móveis",
+                    checked = state.settings.useWifiOnly,
+                    onCheckedChange = { onAction(ConfigUiAction.SetWifiOnly(it)) }
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 68.dp),
+                    color = ValeVoipTheme.extendedColors.cardBorder
+                )
+
+                val batteryIcon = if (state.isIgnoringBatteryOptimizations) {
+                    Icons.Default.BatteryChargingFull
+                } else {
+                    Icons.Default.BatteryAlert
+                }
+                val batteryBgColor = if (state.isIgnoringBatteryOptimizations) {
+                    ValeVoipTheme.extendedColors.greenBg
+                } else {
+                    ValeVoipTheme.extendedColors.orangeBg
+                }
+                val batteryTintColor = if (state.isIgnoringBatteryOptimizations) {
+                    ValeVoipTheme.extendedColors.greenFg
+                } else {
+                    ValeVoipTheme.extendedColors.orangeFg
+                }
+                val batterySubtitle = if (state.isIgnoringBatteryOptimizations) {
+                    "Ativa sem restrições • Recebe chamadas com a tela bloqueada"
+                } else {
+                    "Restrita pelo Android (Doze) • Toque para permitir segundo plano"
+                }
+
+                SettingsActionRow(
+                    icon = batteryIcon,
+                    iconBgColor = batteryBgColor,
+                    iconTint = batteryTintColor,
+                    title = "Conexão em Segundo Plano (Bateria)",
+                    subtitle = batterySubtitle,
+                    onClick = { onAction(ConfigUiAction.RequestBatteryOptimizationSettings) }
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -220,8 +258,6 @@ internal fun ConfigLayout(
             onDismissClick = { onAction(ConfigUiAction.DismissLogoutDialog) }
         )
     }
-
-
 }
 
 @Composable

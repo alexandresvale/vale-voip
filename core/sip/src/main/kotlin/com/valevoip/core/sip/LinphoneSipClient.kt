@@ -1,19 +1,15 @@
 package com.valevoip.core.sip
 
 import android.content.Context
-import android.media.AudioDeviceInfo
-import android.media.AudioManager
-import android.os.Build
-import android.util.Log
 import com.valevoip.core.domain.client.SipClient
 import com.valevoip.core.domain.di.IoDispatcher
+import com.valevoip.core.domain.di.MainDispatcher
 import com.valevoip.core.domain.model.CallDirection
 import com.valevoip.core.domain.model.CallHistoryItem
 import com.valevoip.core.domain.model.CallHistoryStatus
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
-import com.valevoip.core.domain.client.NetworkConnectivityProvider
 import com.valevoip.core.domain.repository.CallHistoryRepository
 import com.valevoip.core.domain.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -24,7 +20,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
@@ -38,22 +33,28 @@ import org.linphone.core.CoreListenerStub
 import org.linphone.core.Factory
 import org.linphone.core.LogLevel
 import org.linphone.core.RegistrationState
+import timber.log.Timber
 
 internal class LinphoneSipClient(
     private val context: Context,
     private val settingsRepository: SettingsRepository,
-    private val networkConnectivityProvider: NetworkConnectivityProvider,
+    @MainDispatcher private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main.immediate,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + mainDispatcher)
 ) : SipClient, CallHistoryRepository {
 
     private val _registrationState = MutableStateFlow<SipRegistrationState>(SipRegistrationState.None)
     override val registrationState: StateFlow<SipRegistrationState> = _registrationState.asStateFlow()
 
+    private val _isMuted = MutableStateFlow(false)
+    override val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
+
+    private val _isSpeakerEnabled = MutableStateFlow(false)
+    override val isSpeakerEnabled: StateFlow<Boolean> = _isSpeakerEnabled.asStateFlow()
+
     private val _callStatus = MutableStateFlow(CallStatus.IDLE)
 
     private var linphoneCore: Core? = null
-    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     init {
         val factory = Factory.instance()
@@ -64,6 +65,8 @@ internal class LinphoneSipClient(
         linphoneCore = factory.createCore(null, null, context)
 
         linphoneCore?.disableRecordOnMute = true
+        linphoneCore?.isVideoCaptureEnabled = false
+        linphoneCore?.isVideoDisplayEnabled = false
 
         val natPolicy = linphoneCore?.createNatPolicy()
         natPolicy?.isIceEnabled = true
@@ -71,8 +74,7 @@ internal class LinphoneSipClient(
 
         linphoneCore?.natPolicy = natPolicy
 
-
-        // Implementado o ouvido do Linphone para escutar as mudanças de status da rede
+        // Implementado o ouvido do Linphone para escutar as mudanças de status da rede e áudio
         linphoneCore?.addListener(object : CoreListenerStub() {
             override fun onAccountRegistrationStateChanged(
                 core: Core,
@@ -80,7 +82,7 @@ internal class LinphoneSipClient(
                 state: RegistrationState?,
                 message: String
             ) {
-                Log.d("LinphoneSipClient", "RegistrationState = $state | Message = $message")
+                Timber.d("RegistrationState = $state | Message = $message")
                 when (state) {
                     RegistrationState.Ok -> _registrationState.value = SipRegistrationState.Ok
                     RegistrationState.Progress -> _registrationState.value = SipRegistrationState.Progress
@@ -88,38 +90,53 @@ internal class LinphoneSipClient(
                     RegistrationState.Failed -> _registrationState.value = SipRegistrationState.Failed(reason = message)
                     RegistrationState.None -> _registrationState.value = SipRegistrationState.None
                     RegistrationState.Refreshing -> _registrationState.value = SipRegistrationState.Refreshing
-                    else -> {}
+                    null -> Unit
                 }
+            }
+
+            override fun onAudioDeviceChanged(core: Core, audioDevice: AudioDevice) {
+                val speakerActive = audioDevice.type == AudioDevice.Type.Speaker
+                Timber.d("AudioDevice alterado: type=${audioDevice.type} | speaker=$speakerActive")
+                _isSpeakerEnabled.value = speakerActive
+            }
+
+            override fun onLastCallEnded(core: Core) {
+                Timber.d("onLastCallEnded: resetando estado de microfone e viva-voz")
+                _isMuted.value = false
+                _isSpeakerEnabled.value = false
             }
 
             override fun onCallStateChanged(
                 core: Core,
-                call: org.linphone.core.Call,
-                state: org.linphone.core.Call.State,
+                call: Call,
+                state: Call.State,
                 message: String
             ) {
-                Log.d("LinphoneSipClient", "CallState = $state | Message = $message")
+                Timber.d("CallState = $state | Message = $message")
                 when (state) {
-                    org.linphone.core.Call.State.OutgoingInit,
-                    org.linphone.core.Call.State.OutgoingProgress -> _callStatus.value = CallStatus.DIALING
+                    Call.State.OutgoingInit,
+                    Call.State.OutgoingProgress -> _callStatus.value = CallStatus.DIALING
 
-                    org.linphone.core.Call.State.OutgoingRinging -> _callStatus.value = CallStatus.RINGING
-                    org.linphone.core.Call.State.IncomingReceived -> _callStatus.value = CallStatus.INCOMING
-                    org.linphone.core.Call.State.Connected,
-                    org.linphone.core.Call.State.StreamsRunning -> {
-                        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                    Call.State.OutgoingRinging -> _callStatus.value = CallStatus.RINGING
+                    Call.State.IncomingReceived -> _callStatus.value = CallStatus.INCOMING
+                    Call.State.Connected,
+                    Call.State.StreamsRunning -> {
+                        _isMuted.value = call.microphoneMuted
+                        _isSpeakerEnabled.value = call.outputAudioDevice?.type == AudioDevice.Type.Speaker
                         _callStatus.value = CallStatus.ACTIVE
                     }
 
-                    org.linphone.core.Call.State.End,
-                    org.linphone.core.Call.State.Error,
-                    org.linphone.core.Call.State.Released -> {
-                        audioManager.mode = AudioManager.MODE_NORMAL
-                        setSpeakerphoneOn(false)
+                    Call.State.End,
+                    Call.State.Error,
+                    Call.State.Released -> {
+                        if (core.callsNb == 0) {
+                            _isMuted.value = false
+                            _isSpeakerEnabled.value = false
+                        }
                         _callStatus.value = CallStatus.ENDED
                     }
 
-                    else -> {}
+                    else -> Unit
                 }
             }
         })
@@ -140,72 +157,96 @@ internal class LinphoneSipClient(
             }
             .launchIn(coroutineScope)
 
-        // Sincroniza alcance de rede com a política 'Usar Somente Wi-Fi'
-        combine(
-            settingsRepository.settings.map { it.useWifiOnly }.distinctUntilChanged(),
-            networkConnectivityProvider.connectivityState
-        ) { useWifiOnly, netState ->
-            val reachable = if (useWifiOnly) {
-                netState.isConnected && netState.isWifi
-            } else {
-                netState.isConnected
-            }
-            reachable
-        }
+        // Delega a política 'Usar Somente Wi-Fi' ao NetworkManagerAbove26 nativo da SDK Linphone
+        settingsRepository.settings
+            .map { it.useWifiOnly }
             .distinctUntilChanged()
-            .onEach { reachable ->
+            .onEach { enabled ->
                 linphoneCore?.let { core ->
-                    Log.d("LinphoneSipClient", "Sincronizando conectividade com Core: isNetworkReachable = $reachable")
-                    core.isNetworkReachable = reachable
+                    Timber.d("Sincronizando política WifiOnly nativa com Core: isWifiOnlyEnabled = $enabled")
+                    core.isWifiOnlyEnabled = enabled
                 }
             }
             .launchIn(coroutineScope)
     }
 
-    override suspend fun register(account: SipAccount): Flow<SipRegistrationState> {
-        val core = linphoneCore ?: return flowOf(SipRegistrationState.Failed("Core is null"))
+    override suspend fun register(account: SipAccount): Flow<SipRegistrationState> =
+        withContext(mainDispatcher) {
+            val core = linphoneCore ?: return@withContext flowOf(SipRegistrationState.Failed("Core is null"))
+            val transportConfiguration = sipTransportConfiguration(account.transport)
 
-        _registrationState.value = SipRegistrationState.Progress
+            if (isAlreadyRegisteredOrConnecting(core, account, transportConfiguration)) {
+                Timber.d(
+                    "Registro idempotente: conta ${account.username}@${account.domain} já ativa/em progresso (${_registrationState.value})."
+                )
+                return@withContext registrationState
+            }
 
-        val authInfo = Factory.instance().createAuthInfo(
-            account.username, null, account.password, null, null, account.domain
-        )
+            _registrationState.value = SipRegistrationState.Progress
 
-        val accountParams = core.createAccountParams()
-        // Define a identidade (Usuário)
-        val identify = Factory.instance().createAddress("sip:${account.username}@${account.domain}")
-        accountParams.identityAddress = identify
+            val authInfo = Factory.instance().createAuthInfo(
+                account.username, null, account.password, null, null, account.domain
+            )
 
-        val transportConfiguration = sipTransportConfiguration(account.transport)
-        core.verifyServerCertificates(transportConfiguration.verifyServerCertificates)
-        core.verifyServerCn(transportConfiguration.verifyServerCommonName)
+            val accountParams = core.createAccountParams()
+            // Define a identidade (Usuário)
+            val identify = Factory.instance().createAddress("sip:${account.username}@${account.domain}")
+            accountParams.identityAddress = identify
 
-        // Preserve TCP for legacy servers; TLS is used only when explicitly selected.
-        val serverAddress = Factory.instance().createAddress("sip:${account.domain}")
-        serverAddress?.transport = transportConfiguration.linphoneTransport
-        accountParams.serverAddress = serverAddress
-        accountParams.isRegisterEnabled = true
+            core.verifyServerCertificates(transportConfiguration.verifyServerCertificates)
+            core.verifyServerCn(transportConfiguration.verifyServerCommonName)
 
-        val linphoneAccount = core.createAccount(accountParams)
-        // Limpa contas antigas, aplica credenciais e inicia o registro nativo
-        core.clearAllAuthInfo()
-        core.clearAccounts()
+            // Preserve TCP for legacy servers; TLS is used only when explicitly selected.
+            val serverAddress = Factory.instance().createAddress("sip:${account.domain}")
+            serverAddress?.transport = transportConfiguration.linphoneTransport
+            accountParams.serverAddress = serverAddress
+            accountParams.isRegisterEnabled = true
 
-        core.addAuthInfo(authInfo)
-        core.addAccount(linphoneAccount)
-        core.defaultAccount = linphoneAccount
+            val linphoneAccount = core.createAccount(accountParams)
+            // Limpa contas antigas, aplica credenciais e inicia o registro nativo
+            core.clearAllAuthInfo()
+            core.clearAccounts()
 
-        // O start() faz com que a máquina interna do C++ do Linphone comece a agir
-        core.start()
-        Log.d("LinphoneSipClient", "RegistrationState register state $registrationState")
-        return registrationState
+            core.addAuthInfo(authInfo)
+            core.addAccount(linphoneAccount)
+            core.defaultAccount = linphoneAccount
+
+            // O start() faz com que a máquina interna do C++ do Linphone comece a agir
+            core.start()
+            Timber.d("RegistrationState register iniciado: ${_registrationState.value}")
+            registrationState
+        }
+
+    private fun isAlreadyRegisteredOrConnecting(
+        core: Core,
+        account: SipAccount,
+        transportConfiguration: SipTransportConfiguration
+    ): Boolean {
+        val currentAccount = core.defaultAccount ?: return false
+        val identity = currentAccount.params.identityAddress
+        val server = currentAccount.params.serverAddress
+
+        val isSameAccount = identity?.username == account.username &&
+            identity.domain == account.domain &&
+            server?.transport == transportConfiguration.linphoneTransport
+
+        val isHealthyOrConnecting = when (_registrationState.value) {
+            SipRegistrationState.Ok,
+            SipRegistrationState.Progress,
+            SipRegistrationState.Refreshing -> true
+
+            is SipRegistrationState.Failed,
+            SipRegistrationState.Cleared,
+            SipRegistrationState.None -> false
+        }
+        return isSameAccount && isHealthyOrConnecting
     }
 
-    override suspend fun unregister(): Flow<SipRegistrationState> {
+    override suspend fun unregister(): Flow<SipRegistrationState> = withContext(mainDispatcher) {
         linphoneCore?.clearAccounts()
         linphoneCore?.clearAllAuthInfo()
         _registrationState.value = SipRegistrationState.None
-        return flowOf(SipRegistrationState.None)
+        flowOf(SipRegistrationState.None)
     }
 
     override fun makeCall(number: String): Result<Unit> {
@@ -244,6 +285,7 @@ internal class LinphoneSipClient(
             val core = linphoneCore ?: throw IllegalStateException("Core is null")
             val call = core.currentCall ?: throw IllegalStateException("No active call")
             call.microphoneMuted = !call.microphoneMuted
+            _isMuted.value = call.microphoneMuted
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -258,52 +300,20 @@ internal class LinphoneSipClient(
             // Get the currently used audio device
             val currentAudioDevice = call.outputAudioDevice
             val speakerEnabled = currentAudioDevice?.type == AudioDevice.Type.Speaker
-
-            var deviceChanged = false
-            var newState = speakerEnabled
+            val targetType = if (speakerEnabled) AudioDevice.Type.Earpiece else AudioDevice.Type.Speaker
 
             // We can get a list of all available audio devices using audioDevices
-            for (audioDevice in core.audioDevices) {
-                if (speakerEnabled && audioDevice.type == AudioDevice.Type.Earpiece) {
-                    call.outputAudioDevice = audioDevice
-                    deviceChanged = true
-                    newState = false
-                    break
-                } else if (!speakerEnabled && audioDevice.type == AudioDevice.Type.Speaker) {
-                    call.outputAudioDevice = audioDevice
-                    deviceChanged = true
-                    newState = true
-                    break
-                }
-            }
-
-            if (deviceChanged) {
+            val targetDevice = core.audioDevices.firstOrNull { it.type == targetType }
+            if (targetDevice != null) {
+                call.outputAudioDevice = targetDevice
+                val newState = targetType == AudioDevice.Type.Speaker
+                _isSpeakerEnabled.value = newState
                 Result.success(newState)
             } else {
                 Result.failure(Exception("Dispositivo de áudio não suportado ou não encontrado."))
             }
         } catch (e: Exception) {
             Result.failure(e)
-        }
-    }
-
-    private fun setSpeakerphoneOn(on: Boolean) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (on) {
-                    val speakerDevice = audioManager.availableCommunicationDevices.firstOrNull {
-                        it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-                    }
-                    speakerDevice?.let { audioManager.setCommunicationDevice(it) }
-                } else {
-                    audioManager.clearCommunicationDevice()
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = on
-            }
-        } catch (e: Exception) {
-            Log.e("LinphoneSipClient", "Erro ao mudar viva-voz: ${e.message}")
         }
     }
 
@@ -333,39 +343,70 @@ internal class LinphoneSipClient(
         return linphoneCore?.version ?: "Desconhecido"
     }
 
-    override suspend fun getCallHistory(): Result<List<CallHistoryItem>> = withContext(ioDispatcher) {
-        try {
-            val logs = linphoneCore?.callLogs ?: return@withContext Result.success(emptyList())
-            val mapped = logs.map { log ->
-                val direction = when (log.dir) {
-                    Call.Dir.Incoming -> CallDirection.INCOMING
-                    else -> CallDirection.OUTGOING
-                }
+    private data class RawCallLogSnapshot(
+        val id: String,
+        val remoteUsername: String,
+        val displayName: String?,
+        val direction: Call.Dir,
+        val status: Call.Status,
+        val startDateSeconds: Long,
+        val durationSeconds: Int
+    )
 
-                val status = when (log.status) {
-                    Call.Status.Missed -> CallHistoryStatus.MISSED
-                    Call.Status.Declined,
-                    Call.Status.Aborted -> CallHistoryStatus.DECLINED
-                    else -> CallHistoryStatus.SUCCESS
+    override suspend fun getCallHistory(): Result<List<CallHistoryItem>> {
+        return try {
+            // Extrai snapshot dos ponteiros JNI na thread confinada do Core
+            val snapshots = withContext(mainDispatcher) {
+                val logs = linphoneCore?.callLogs ?: return@withContext emptyList()
+                logs.map { log ->
+                    RawCallLogSnapshot(
+                        id = log.callId ?: "",
+                        remoteUsername = log.remoteAddress.username ?: "Desconhecido",
+                        displayName = log.remoteAddress.displayName,
+                        direction = log.dir,
+                        status = log.status,
+                        startDateSeconds = log.startDate,
+                        durationSeconds = log.duration
+                    )
                 }
+            }
 
-                CallHistoryItem(
-                    id = log.callId ?: "",
-                    remoteAddress = log.remoteAddress.username ?: "Desconhecido",
-                    displayName = log.remoteAddress.displayName,
-                    direction = direction,
-                    status = status,
-                    timestamp = log.startDate * 1000L,
-                    durationSeconds = log.duration
-                )
-            }.sortedByDescending { it.timestamp }
+            // Mapeia e ordena coleções no IoDispatcher sem bloquear a Main Thread
+            val mapped = withContext(ioDispatcher) {
+                snapshots.map { snapshot ->
+                    val direction = when (snapshot.direction) {
+                        Call.Dir.Incoming -> CallDirection.INCOMING
+                        Call.Dir.Outgoing -> CallDirection.OUTGOING
+                    }
+
+                    val status = when (snapshot.status) {
+                        Call.Status.Missed -> CallHistoryStatus.MISSED
+                        Call.Status.Declined,
+                        Call.Status.Aborted,
+                        Call.Status.EarlyAborted -> CallHistoryStatus.DECLINED
+                        Call.Status.Success,
+                        Call.Status.AcceptedElsewhere,
+                        Call.Status.DeclinedElsewhere -> CallHistoryStatus.SUCCESS
+                    }
+
+                    CallHistoryItem(
+                        id = snapshot.id,
+                        remoteAddress = snapshot.remoteUsername,
+                        displayName = snapshot.displayName,
+                        direction = direction,
+                        status = status,
+                        timestamp = snapshot.startDateSeconds * 1000L,
+                        durationSeconds = snapshot.durationSeconds
+                    )
+                }.sortedByDescending { it.timestamp }
+            }
             Result.success(mapped)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    override suspend fun deleteCallHistoryItem(id: String): Result<Unit> = withContext(ioDispatcher) {
+    override suspend fun deleteCallHistoryItem(id: String): Result<Unit> = withContext(mainDispatcher) {
         try {
             val logToRemove = linphoneCore?.callLogs?.find { it.callId == id }
             if (logToRemove != null) {
@@ -379,7 +420,7 @@ internal class LinphoneSipClient(
         }
     }
 
-    override suspend fun clearCallHistory(): Result<Unit> = withContext(ioDispatcher) {
+    override suspend fun clearCallHistory(): Result<Unit> = withContext(mainDispatcher) {
         try {
             linphoneCore?.clearCallLogs()
             Result.success(Unit)

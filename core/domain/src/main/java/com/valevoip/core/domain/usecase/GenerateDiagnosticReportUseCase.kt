@@ -1,5 +1,6 @@
 package com.valevoip.core.domain.usecase
 
+import com.valevoip.core.domain.client.BatteryOptimizationProvider
 import com.valevoip.core.domain.client.DeviceInfoProvider
 import com.valevoip.core.domain.client.NetworkConnectivityProvider
 import com.valevoip.core.domain.client.SipClient
@@ -22,7 +23,8 @@ class GenerateDiagnosticReportUseCase @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val sipClient: SipClient,
     private val deviceInfoProvider: DeviceInfoProvider,
-    private val networkConnectivityProvider: NetworkConnectivityProvider
+    private val networkConnectivityProvider: NetworkConnectivityProvider,
+    private val batteryOptimizationProvider: BatteryOptimizationProvider
 ) {
     suspend operator fun invoke(): String {
         val account = accountRepository.getAccount()
@@ -30,6 +32,7 @@ class GenerateDiagnosticReportUseCase @Inject constructor(
         val regState = sipClient.registrationState.value
         val isConnected = networkConnectivityProvider.isConnected
         val isWifi = networkConnectivityProvider.isWifiConnected
+        val isIgnoringBatteryOpt = batteryOptimizationProvider.isIgnoringBatteryOptimizations
         val networkType = when {
             !isConnected -> "Sem conexão com a Internet"
             isWifi -> "Wi-Fi"
@@ -46,6 +49,7 @@ class GenerateDiagnosticReportUseCase @Inject constructor(
             appendLine("Fabricante: ${deviceInfoProvider.manufacturer}")
             appendLine("Modelo: ${deviceInfoProvider.model}")
             appendLine("Android: ${deviceInfoProvider.osVersion} (API ${deviceInfoProvider.apiLevel})")
+            appendLine("Isento de Otimização de Bateria (Doze): ${if (isIgnoringBatteryOpt) "Sim" else "Não"}")
             appendLine()
             appendLine("--- REDE E CONECTIVIDADE ---")
             appendLine("Conexão Ativa: ${if (isConnected) "Sim" else "Não"}")

@@ -106,6 +106,8 @@ class RegisterAccountUseCaseTest {
 
         override val registrationState: StateFlow<SipRegistrationState> =
             MutableStateFlow(SipRegistrationState.None).asStateFlow()
+        override val isMuted: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+        override val isSpeakerEnabled: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
         override suspend fun register(account: SipAccount): Flow<SipRegistrationState> = registrationEmission
         override suspend fun unregister(): Flow<SipRegistrationState> = emptyFlow()

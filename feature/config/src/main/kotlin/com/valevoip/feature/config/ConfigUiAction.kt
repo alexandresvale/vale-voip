@@ -4,6 +4,8 @@ sealed interface ConfigUiAction {
     data class SetEchoCancellation(val enabled: Boolean) : ConfigUiAction
     data class SetVibrate(val enabled: Boolean) : ConfigUiAction
     data class SetWifiOnly(val enabled: Boolean) : ConfigUiAction
+    data object RefreshBatteryOptimizationStatus : ConfigUiAction
+    data object RequestBatteryOptimizationSettings : ConfigUiAction
     data object OpenClearHistoryDialog : ConfigUiAction
     data object DismissClearHistoryDialog : ConfigUiAction
     data object ConfirmClearHistory : ConfigUiAction

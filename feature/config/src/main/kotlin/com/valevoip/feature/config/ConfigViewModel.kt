@@ -6,6 +6,7 @@ import com.valevoip.core.domain.usecase.ClearCallHistoryUseCase
 import com.valevoip.core.domain.usecase.GenerateDiagnosticReportUseCase
 import com.valevoip.core.domain.usecase.GetAccountUseCase
 import com.valevoip.core.domain.usecase.GetCallHistoryUseCase
+import com.valevoip.core.domain.usecase.IsIgnoringBatteryOptimizationsUseCase
 import com.valevoip.core.domain.usecase.ObserveRegistrationStateUseCase
 import com.valevoip.core.domain.usecase.ObserveVoipSettingsUseCase
 import com.valevoip.core.domain.usecase.SetEchoCancellationUseCase
@@ -31,6 +32,7 @@ class ConfigViewModel @Inject constructor(
     private val setEchoCancellationUseCase: SetEchoCancellationUseCase,
     private val setVibrateOnCallUseCase: SetVibrateOnCallUseCase,
     private val setWifiOnlyUseCase: SetWifiOnlyUseCase,
+    private val isIgnoringBatteryOptimizationsUseCase: IsIgnoringBatteryOptimizationsUseCase,
     private val getCallHistoryUseCase: GetCallHistoryUseCase,
     private val clearCallHistoryUseCase: ClearCallHistoryUseCase,
     private val generateDiagnosticReportUseCase: GenerateDiagnosticReportUseCase,
@@ -47,6 +49,7 @@ class ConfigViewModel @Inject constructor(
         loadAccountInfo()
         observeRegistration()
         observeSettings()
+        refreshBatteryOptimizationStatus()
         loadHistoryCount()
     }
 
@@ -80,6 +83,11 @@ class ConfigViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    private fun refreshBatteryOptimizationStatus() {
+        val isIgnoring = isIgnoringBatteryOptimizationsUseCase()
+        _uiState.update { it.copy(isIgnoringBatteryOptimizations = isIgnoring) }
+    }
+
     fun loadHistoryCount() {
         viewModelScope.launch {
             getCallHistoryUseCase().fold(
@@ -108,6 +116,18 @@ class ConfigViewModel @Inject constructor(
             is ConfigUiAction.SetWifiOnly -> {
                 viewModelScope.launch {
                     setWifiOnlyUseCase(action.enabled)
+                }
+            }
+            is ConfigUiAction.RefreshBatteryOptimizationStatus -> {
+                refreshBatteryOptimizationStatus()
+            }
+            is ConfigUiAction.RequestBatteryOptimizationSettings -> {
+                viewModelScope.launch {
+                    _uiEffect.emit(
+                        ConfigUiEffect.OpenBatteryOptimizationSettings(
+                            isAlreadyIgnoring = _uiState.value.isIgnoringBatteryOptimizations
+                        )
+                    )
                 }
             }
             is ConfigUiAction.OpenClearHistoryDialog -> {

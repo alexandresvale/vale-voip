@@ -88,6 +88,8 @@ class MakeCallUseCaseTest {
         var shouldFail: Boolean = false
 
         override val registrationState: StateFlow<SipRegistrationState> = MutableStateFlow(SipRegistrationState.None)
+        override val isMuted: StateFlow<Boolean> = MutableStateFlow(false)
+        override val isSpeakerEnabled: StateFlow<Boolean> = MutableStateFlow(false)
         override suspend fun register(account: SipAccount): Flow<SipRegistrationState> = emptyFlow()
         override suspend fun unregister(): Flow<SipRegistrationState> = emptyFlow()
 

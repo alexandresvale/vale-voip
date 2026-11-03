@@ -1,15 +1,17 @@
 package com.valevoip.feature.call
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.usecase.AnswerCallUseCase
 import com.valevoip.core.domain.usecase.GetCallStatusSyncUseCase
+import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
 import com.valevoip.core.domain.usecase.MakeCallUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
+import com.valevoip.core.domain.usecase.ObserveMuteStateUseCase
+import com.valevoip.core.domain.usecase.ObserveSpeakerStateUseCase
 import com.valevoip.core.domain.usecase.ToggleMuteUseCase
 import com.valevoip.core.domain.usecase.ToggleSpeakerUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -31,16 +34,26 @@ internal class CallViewModel @Inject constructor(
     private val toggleMuteUseCase: ToggleMuteUseCase,
     private val toggleSpeakerUseCase: ToggleSpeakerUseCase,
     private val observeCallStateUseCase: ObserveCallStateUseCase,
-    private val getCallStatusSyncUseCase: GetCallStatusSyncUseCase
+    private val getCallStatusSyncUseCase: GetCallStatusSyncUseCase,
+    private val getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase,
+    private val observeMuteStateUseCase: ObserveMuteStateUseCase,
+    private val observeSpeakerStateUseCase: ObserveSpeakerStateUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CallUiState())
+    private val _uiState = MutableStateFlow(
+        CallUiState(
+            contactNumber = savedStateHandle.get<String>("number").orEmpty()
+        )
+    )
     val uiState = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
     private var hasInitiatedCall = false
+    private var hasObservedLiveCall = false
 
     init {
+        hydrateRemoteNumberIfMissing()
+        observeAudioStates()
         observeCallStatus()
     }
 
@@ -50,7 +63,7 @@ internal class CallViewModel @Inject constructor(
             CallUiEvent.OnHangup -> performHangup()
             CallUiEvent.OnToggleMute -> performToggleMute()
             CallUiEvent.OnToggleSpeaker -> performToggleSpeaker()
-            CallUiEvent.OnShowKeypad -> {}
+            CallUiEvent.OnShowKeypad -> Unit
             CallUiEvent.OnAnswer -> performAnswer()
         }
     }
@@ -59,13 +72,16 @@ internal class CallViewModel @Inject constructor(
         logEvent("Iniciando avaliação de chamada (handleCallInitialization)")
         val number = savedStateHandle.get<String>("number")
 
-        // Proteção: Se já temos uma chamada ativa ou tocando (via SIP), 
+        // Proteção: Se já temos uma chamada ativa ou tocando (via SIP),
         // não devemos iniciar uma nova chamada de saída!
         val currentStatus = getCallStatusSyncUseCase()
         if (currentStatus != CallStatus.IDLE && currentStatus != CallStatus.ENDED) {
+            hasObservedLiveCall = true
             logEvent("Já existe uma chamada no estado: $currentStatus. Apenas exibindo a tela.")
             if (!number.isNullOrBlank()) {
                 _uiState.update { it.copy(contactNumber = number) }
+            } else {
+                hydrateRemoteNumberIfMissing()
             }
             return
         }
@@ -75,18 +91,14 @@ internal class CallViewModel @Inject constructor(
             _uiState.update { it.copy(contactNumber = number) }
             startCall(number)
         } else if (number.isNullOrBlank()) {
+            hydrateRemoteNumberIfMissing()
             logEvent("Modo Recebimento detectado (Número vazio na rota). Aguardando Linphone enviar os dados.")
         }
     }
 
     private fun startCall(number: String) {
         logEvent("startCall - $number")
-        val numberToCall = when (number) {
-            "2525" -> "valevoipios"
-            "5555" -> "alexandreskt16"
-            else -> number
-        }
-        makeCallUseCase(numberToCall)
+        makeCallUseCase(number)
             .onSuccess {
                 logEvent("Chamada enviada com sucesso para o core.")
             }
@@ -122,30 +134,53 @@ internal class CallViewModel @Inject constructor(
     }
 
     private fun performToggleMute() {
-        val newMuteState = !_uiState.value.isMuted
-        _uiState.update { it.copy(isMuted = newMuteState) }
+        val previousMuteState = _uiState.value.isMuted
+        _uiState.update { it.copy(isMuted = !previousMuteState) }
         toggleMuteUseCase()
             .onSuccess {
-                logEvent("Mute alterado com sucesso para: $newMuteState")
+                logEvent("Mute alterado com sucesso para: ${!previousMuteState}")
             }
             .onFailure {
                 logEvent("Falha ao alterar mute.")
-                _uiState.update { it.copy(isMuted = !newMuteState) }
+                _uiState.update { it.copy(isMuted = previousMuteState) }
             }
     }
 
     private fun performToggleSpeaker() {
-        val newSpeakerState = !_uiState.value.isSpeakerOn
-        _uiState.update { it.copy(isSpeakerOn = newSpeakerState) }
+        val previousSpeakerState = _uiState.value.isSpeakerOn
+        _uiState.update { it.copy(isSpeakerOn = !previousSpeakerState) }
         toggleSpeakerUseCase()
-            .onSuccess {
-                logEvent("Viva-voz alterado para: $newSpeakerState")
+            .onSuccess { confirmedState ->
+                logEvent("Viva-voz alterado para: $confirmedState")
+                _uiState.update { it.copy(isSpeakerOn = confirmedState) }
             }
             .onFailure {
                 logEvent("Falha ao mudar viva-voz")
-                // 3. Rollback: Se falhou, desfaz a mudança visual
-                _uiState.update { it.copy(isSpeakerOn = !newSpeakerState) }
+                _uiState.update { it.copy(isSpeakerOn = previousSpeakerState) }
             }
+    }
+
+    private fun observeAudioStates() {
+        viewModelScope.launch {
+            observeMuteStateUseCase().collect { muted ->
+                _uiState.update { it.copy(isMuted = muted) }
+            }
+        }
+        viewModelScope.launch {
+            observeSpeakerStateUseCase().collect { speakerEnabled ->
+                _uiState.update { it.copy(isSpeakerOn = speakerEnabled) }
+            }
+        }
+    }
+
+    private fun hydrateRemoteNumberIfMissing() {
+        val currentContact = _uiState.value.contactNumber
+        if (currentContact.isBlank() || currentContact == UNKNOWN_CALLER_FALLBACK) {
+            val remoteNumber = getCurrentCallNumberUseCase()
+            if (remoteNumber.isNotBlank()) {
+                _uiState.update { it.copy(contactNumber = remoteNumber) }
+            }
+        }
     }
 
     private fun startTimer() {
@@ -182,19 +217,45 @@ internal class CallViewModel @Inject constructor(
         viewModelScope.launch {
             observeCallStateUseCase()
                 .collect { newStatus ->
-                    logEvent("Abrindo tela para chamada existente. Status: $newStatus")
-                    _uiState.update { it.copy(callStatus = newStatus) }
-                    when (newStatus) {
-                        CallStatus.INCOMING -> {}
-                        CallStatus.ACTIVE -> startTimer()
-                        CallStatus.ENDED -> stopTimer()
-                        else -> Unit
+                    val routeNumber = savedStateHandle.get<String>("number")
+                    val isStaleEndedBeforeOutgoingInit = newStatus == CallStatus.ENDED &&
+                        !hasObservedLiveCall &&
+                        !hasInitiatedCall &&
+                        !routeNumber.isNullOrBlank()
+
+                    if (isStaleEndedBeforeOutgoingInit) {
+                        logEvent("Ignorando CallStatus.ENDED residual da chamada anterior antes da discagem.")
+                        return@collect
                     }
+
+                    logEvent("Status de chamada atualizado: $newStatus")
+                    when (newStatus) {
+                        CallStatus.INCOMING,
+                        CallStatus.DIALING,
+                        CallStatus.RINGING -> {
+                            hasObservedLiveCall = true
+                            hydrateRemoteNumberIfMissing()
+                        }
+
+                        CallStatus.ACTIVE -> {
+                            hasObservedLiveCall = true
+                            hydrateRemoteNumberIfMissing()
+                            startTimer()
+                        }
+
+                        CallStatus.ENDED -> stopTimer()
+                        CallStatus.IDLE -> Unit
+                    }
+                    _uiState.update { it.copy(callStatus = newStatus) }
                 }
         }
     }
 
-    private fun logEvent(string: String) {
-        Log.d("VALEVOIP_TAG", "CallViewModel | $string")
+    private fun logEvent(message: String) {
+        Timber.d("CallViewModel | %s", message)
+    }
+
+    private companion object {
+        const val UNKNOWN_CALLER_FALLBACK = "Desconhecido"
     }
 }

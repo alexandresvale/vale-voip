@@ -13,6 +13,16 @@ interface SipClient {
     val registrationState: StateFlow<SipRegistrationState>
 
     /**
+     * Fluxo contínuo que emite se o microfone da chamada atual está silenciado
+     */
+    val isMuted: StateFlow<Boolean>
+
+    /**
+     * Fluxo contínuo que emite se a saída de áudio atual é o viva-voz (alto-falante)
+     */
+    val isSpeakerEnabled: StateFlow<Boolean>
+
+    /**
      * Inicia o motor SIP com as credenciais informadas.
      */
     suspend fun register(account: SipAccount): Flow<SipRegistrationState>

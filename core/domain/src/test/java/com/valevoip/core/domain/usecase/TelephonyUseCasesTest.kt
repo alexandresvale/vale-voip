@@ -1,5 +1,6 @@
 package com.valevoip.core.domain.usecase
 
+import com.valevoip.core.domain.client.BatteryOptimizationProvider
 import com.valevoip.core.domain.client.SipClient
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -24,6 +26,7 @@ class TelephonyUseCasesTest {
 
     private lateinit var fakeSipClient: FakeSipClient
     private lateinit var fakeAccountRepository: FakeAccountRepository
+    private lateinit var fakeBatteryOptimizationProvider: FakeBatteryOptimizationProvider
 
     private lateinit var answerCallUseCase: AnswerCallUseCase
     private lateinit var hangUpUseCase: HangUpUseCase
@@ -32,6 +35,9 @@ class TelephonyUseCasesTest {
     private lateinit var getCallStatusSyncUseCase: GetCallStatusSyncUseCase
     private lateinit var getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase
     private lateinit var observeCallStateUseCase: ObserveCallStateUseCase
+    private lateinit var observeMuteStateUseCase: ObserveMuteStateUseCase
+    private lateinit var observeSpeakerStateUseCase: ObserveSpeakerStateUseCase
+    private lateinit var isIgnoringBatteryOptimizationsUseCase: IsIgnoringBatteryOptimizationsUseCase
     private lateinit var getAccountUseCase: GetAccountUseCase
     private lateinit var unregisterAccountUseCase: UnregisterAccountUseCase
     private lateinit var observeRegistrationStateUseCase: ObserveRegistrationStateUseCase
@@ -42,6 +48,7 @@ class TelephonyUseCasesTest {
     fun setUp() {
         fakeSipClient = FakeSipClient()
         fakeAccountRepository = FakeAccountRepository()
+        fakeBatteryOptimizationProvider = FakeBatteryOptimizationProvider()
 
         answerCallUseCase = AnswerCallUseCase(fakeSipClient)
         hangUpUseCase = HangUpUseCase(fakeSipClient)
@@ -50,6 +57,9 @@ class TelephonyUseCasesTest {
         getCallStatusSyncUseCase = GetCallStatusSyncUseCase(fakeSipClient)
         getCurrentCallNumberUseCase = GetCurrentCallNumberUseCase(fakeSipClient)
         observeCallStateUseCase = ObserveCallStateUseCase(fakeSipClient)
+        observeMuteStateUseCase = ObserveMuteStateUseCase(fakeSipClient)
+        observeSpeakerStateUseCase = ObserveSpeakerStateUseCase(fakeSipClient)
+        isIgnoringBatteryOptimizationsUseCase = IsIgnoringBatteryOptimizationsUseCase(fakeBatteryOptimizationProvider)
         getAccountUseCase = GetAccountUseCase(fakeAccountRepository)
         unregisterAccountUseCase = UnregisterAccountUseCase(fakeSipClient, fakeAccountRepository, testDispatcher)
         observeRegistrationStateUseCase = ObserveRegistrationStateUseCase(fakeSipClient)
@@ -103,6 +113,27 @@ class TelephonyUseCasesTest {
     }
 
     @Test
+    fun `observeMuteState emits mute state flow from sipClient`() = runTest {
+        fakeSipClient.isMutedFlow.value = true
+        assertTrue(observeMuteStateUseCase().first())
+    }
+
+    @Test
+    fun `observeSpeakerState emits speaker state flow from sipClient`() = runTest {
+        fakeSipClient.isSpeakerEnabledFlow.value = true
+        assertTrue(observeSpeakerStateUseCase().first())
+    }
+
+    @Test
+    fun `isIgnoringBatteryOptimizations delegates to provider`() {
+        fakeBatteryOptimizationProvider.isIgnoringBatteryOptimizations = false
+        assertFalse(isIgnoringBatteryOptimizationsUseCase())
+
+        fakeBatteryOptimizationProvider.isIgnoringBatteryOptimizations = true
+        assertTrue(isIgnoringBatteryOptimizationsUseCase())
+    }
+
+    @Test
     fun `getAccount returns saved account from repository`() = runTest {
         val account = SipAccount("1001", "pass", "domain.com")
         fakeAccountRepository.insertAccount(account)
@@ -149,10 +180,14 @@ class TelephonyUseCasesTest {
         var currentNumber: String? = null
         val callStatusFlow = MutableStateFlow(CallStatus.IDLE)
         val registrationStateFlow = MutableStateFlow<SipRegistrationState>(SipRegistrationState.None)
+        val isMutedFlow = MutableStateFlow(false)
+        val isSpeakerEnabledFlow = MutableStateFlow(false)
         var unregisterEmission: Flow<SipRegistrationState> = emptyFlow()
         var unregisterShouldThrow = false
 
         override val registrationState: StateFlow<SipRegistrationState> = registrationStateFlow
+        override val isMuted: StateFlow<Boolean> = isMutedFlow
+        override val isSpeakerEnabled: StateFlow<Boolean> = isSpeakerEnabledFlow
         override suspend fun register(account: SipAccount): Flow<SipRegistrationState> = emptyFlow()
         override suspend fun unregister(): Flow<SipRegistrationState> {
             if (unregisterShouldThrow) throw IllegalStateException("Network Error")
@@ -175,5 +210,9 @@ class TelephonyUseCasesTest {
         override suspend fun getAccount(): SipAccount? = account
         override suspend fun insertAccount(sipAccount: SipAccount) { account = sipAccount }
         override suspend fun clearAccount() { account = null }
+    }
+
+    private class FakeBatteryOptimizationProvider : BatteryOptimizationProvider {
+        override var isIgnoringBatteryOptimizations: Boolean = true
     }
 }

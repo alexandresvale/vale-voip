@@ -8,6 +8,7 @@ data class ConfigUiState(
     val domain: String = "",
     val registrationState: SipRegistrationState = SipRegistrationState.None,
     val settings: VoipSettings = VoipSettings(),
+    val isIgnoringBatteryOptimizations: Boolean = true,
     val callHistoryCount: Int = 0,
     val showClearHistoryDialog: Boolean = false,
     val showLogoutDialog: Boolean = false

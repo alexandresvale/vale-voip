@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    
+
     <!-- Permissões essenciais para áudio e chamadas SIP (VoIP) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- Permissões para Foreground Service e TelecomManager -->
+    <!-- Permissões para Foreground Service, Resiliência Local e TelecomManager -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -23,12 +25,16 @@
         android:required="false" />
 
     <application>
-        <!-- Serviço VoIP que mantém a SDK Linphone viva e gerencia notificações -->
+        <!-- Serviço VoIP que mantém a SDK Linphone viva localmente e gerencia notificações -->
         <service
             android:name="com.valevoip.core.telecom.service.VoipForegroundService"
             android:exported="false"
-            android:foregroundServiceType="phoneCall|microphone"
-            android:stopWithTask="false" />
+            android:foregroundServiceType="specialUse|phoneCall|microphone"
+            android:stopWithTask="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Manutencao persistente da sessao SIP VoIP local para recebimento imediato de chamadas corporativas sem dependencia de Push externo." />
+        </service>
 
         <receiver
             android:name="com.valevoip.core.telecom.receiver.BootCompletedReceiver"
