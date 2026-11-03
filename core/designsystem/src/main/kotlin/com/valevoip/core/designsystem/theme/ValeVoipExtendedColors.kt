@@ -13,5 +13,9 @@ data class ValeVoipExtendedColors(
     val redBg: Color,
     val redFg: Color,
     val orange: Color,
-    val purple: Color
+    val orangeBg: Color,
+    val orangeFg: Color,
+    val purple: Color,
+    val cardBackground: Color,
+    val cardBorder: Color
 )

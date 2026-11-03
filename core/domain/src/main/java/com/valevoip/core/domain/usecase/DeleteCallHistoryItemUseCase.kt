@@ -1,12 +1,12 @@
 package com.valevoip.core.domain.usecase
 
-import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.repository.CallHistoryRepository
 import javax.inject.Inject
 
 class DeleteCallHistoryItemUseCase @Inject constructor(
-    private val sipClient: SipClient
+    private val callHistoryRepository: CallHistoryRepository
 ) {
-    operator fun invoke(id: String): Result<Unit> {
-        return sipClient.deleteCallLog(id)
+    suspend operator fun invoke(id: String): Result<Unit> {
+        return callHistoryRepository.deleteCallHistoryItem(id)
     }
 }

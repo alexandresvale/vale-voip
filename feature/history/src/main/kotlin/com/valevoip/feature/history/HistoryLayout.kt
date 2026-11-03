@@ -2,7 +2,6 @@ package com.valevoip.feature.history
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,12 +35,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import com.valevoip.core.designsystem.extension.toFormattedDate
+import com.valevoip.core.designsystem.extension.toFormattedTime
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
 import com.valevoip.core.domain.model.CallDirection
 import com.valevoip.core.domain.model.CallHistoryItem
-import com.valevoip.core.designsystem.extension.toFormattedDate
-import com.valevoip.core.designsystem.extension.toFormattedTime
 import com.valevoip.core.domain.model.CallHistoryStatus
+
 @Composable
 internal fun HistoryLayout(
     state: HistoryUiState,
@@ -82,27 +81,7 @@ internal fun HistoryContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Histórico",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            TextButton(onClick = { onAction(HistoryUiAction.ClearHistory) }) {
-                Text(
-                    text = "Limpar",
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Search Bar
         OutlinedTextField(
@@ -281,9 +260,6 @@ internal fun HistoryItemRow(item: CallHistoryItem, onClick: () -> Unit) {
         )
     }
 }
-
-
-
 
 
 internal class HistoryUiStateProvider : PreviewParameterProvider<HistoryUiState> {

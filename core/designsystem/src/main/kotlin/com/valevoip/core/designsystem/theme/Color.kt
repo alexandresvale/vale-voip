@@ -239,7 +239,18 @@ val greenBgDark = Color(0xFF00390A)
 val greenFgDark = Color(0xFF74D877)
 
 val orange = Color(0xFFF57C00)
+val orangeLight = Color(0xFFF57C00)
+val orangeDark = Color(0xFFFFB74D)
+
+val orangeBgLight = Color(0xFFFEF3C7)
+val orangeFgLight = Color(0xFFD97706)
+val orangeBgDark = Color(0xFF432800)
+val orangeFgDark = Color(0xFFFFB74D)
 val purple = Color(0xFF9C27B0)
+
+// Card Tokens
+val cardBorderLight = Color(0xFFE2E8F0)
+val cardBorderDark = Color(0x6643474E)
 
 // Tonal Grey (Histórico - Recebida)
 val TonalGreyBgLight = Color(0xFFF5F5F5)

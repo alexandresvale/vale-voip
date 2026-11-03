@@ -1,6 +1,5 @@
 package com.valevoip.core.domain.client
 
-import com.valevoip.core.domain.model.CallHistoryItem
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
@@ -21,9 +20,6 @@ interface SipClient {
     /**
      * Desconecta do servidor
      */
-//    suspend fun unregister()
-
-    //    suspend fun registerUser(username: String, password: String, domain: String): Flow<SipRegistrationState>
     suspend fun unregister(): Flow<SipRegistrationState>
     fun makeCall(number: String): Result<Unit>
     fun hangUp(): Result<Unit>
@@ -34,7 +30,5 @@ interface SipClient {
     fun getCallStatusFlow(): Flow<CallStatus>
     fun getCurrentCallNumber(): String?
     fun getSynchronousCallStatus(): CallStatus
-    fun getCallLogs(): Result<List<CallHistoryItem>>
-    fun deleteCallLog(id: String): Result<Unit>
-    fun clearCallLogs(): Result<Unit>
+    fun getLinphoneVersion(): String
 }

@@ -1,6 +1,7 @@
 package com.valevoip.core.telecom.service
 
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -8,12 +9,15 @@ import android.os.IBinder
 import androidx.core.app.ServiceCompat
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.usecase.AnswerCallUseCase
+import com.valevoip.core.domain.usecase.GetAccountUseCase
 import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
+import com.valevoip.core.domain.usecase.ObserveVoipSettingsUseCase
 import com.valevoip.core.navigation.NavigationCommand
 import com.valevoip.core.navigation.NavigationCommandBus
 import com.valevoip.core.telecom.notification.VoipNotificationManager
+import com.valevoip.core.telecom.vibration.VoipVibratorManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,14 +54,44 @@ class VoipForegroundService : Service() {
     @Inject
     lateinit var wakeLockManager: ProximityWakeLockManager
 
+    @Inject
+    lateinit var vibratorManager: VoipVibratorManager
+
+    @Inject
+    lateinit var observeVoipSettingsUseCase: ObserveVoipSettingsUseCase
+
+    @Inject
+    lateinit var getAccountUseCase: GetAccountUseCase
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var observerJob: Job? = null
+    private var settingsObserverJob: Job? = null
     private var isCallActive: Boolean = false
+    private var vibrateOnIncomingCall: Boolean = true
 
     companion object {
         const val ACTION_START_MONITORING = "ACTION_START_MONITORING"
         const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
         private const val TAG = "VALEVOIP_TELECOM"
+
+        fun start(context: Context) {
+            val intent = Intent(context, VoipForegroundService::class.java).apply {
+                action = ACTION_START_MONITORING
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        fun stop(context: Context) {
+            val intent = Intent(context, VoipForegroundService::class.java).apply {
+                action = ACTION_STOP_SERVICE
+            }
+            context.startService(intent)
+            context.stopService(intent)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -71,41 +105,80 @@ class VoipForegroundService : Service() {
         Timber.d("onStartCommand action=${intent?.action}")
 
         when (intent?.action) {
-            ACTION_START_MONITORING -> startMonitoring()
+            ACTION_START_MONITORING, null -> startMonitoring()
             VoipNotificationManager.ACTION_HANGUP -> performHangup()
             VoipNotificationManager.ACTION_ANSWER -> performAnswer()
-            ACTION_STOP_SERVICE -> stopSelf()
+            ACTION_STOP_SERVICE -> stopMonitoring()
         }
 
         return START_STICKY
     }
 
+    private fun stopMonitoring() {
+        Timber.d("stopMonitoring: Encerrando foreground e parando serviço.")
+        vibratorManager.stopVibration()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        notificationManager.cancelAll()
+        wakeLockManager.release()
+        stopSelf()
+    }
+
     private fun startMonitoring() {
-        if (isCallActive) {
-            Timber.d("START_MONITORING ignorado: chamada em andamento")
+        serviceScope.launch {
+            val account = getAccountUseCase()
+            if (account == null) {
+                Timber.w("startMonitoring: Nenhuma conta SIP ativa encontrada. Encerrando serviço.")
+                val onlineNotification = notificationManager.buildOnlineNotification()
+                val serviceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                } else {
+                    0
+                }
+                ServiceCompat.startForeground(
+                    this@VoipForegroundService,
+                    VoipNotificationManager.SERVICE_NOTIFICATION_ID,
+                    onlineNotification,
+                    serviceType
+                )
+                stopMonitoring()
+                return@launch
+            }
+
+            if (isCallActive) {
+                Timber.d("START_MONITORING ignorado: chamada em andamento")
+                ensureObserverIsRunning()
+                return@launch
+            }
+
+            Timber.d("Iniciando notificação persistente (Online)")
+            val onlineNotification = notificationManager.buildOnlineNotification()
+            val serviceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+            } else {
+                0
+            }
+
+            ServiceCompat.startForeground(
+                this@VoipForegroundService,
+                VoipNotificationManager.SERVICE_NOTIFICATION_ID,
+                onlineNotification,
+                serviceType
+            )
+
             ensureObserverIsRunning()
-            return
         }
-
-        Timber.d("Iniciando notificação persistente (Online)")
-        val onlineNotification = notificationManager.buildOnlineNotification()
-        val serviceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
-        } else {
-            0
-        }
-
-        ServiceCompat.startForeground(
-            this,
-            VoipNotificationManager.SERVICE_NOTIFICATION_ID,
-            onlineNotification,
-            serviceType
-        )
-
-        ensureObserverIsRunning()
     }
 
     private fun ensureObserverIsRunning() {
+        if (settingsObserverJob?.isActive != true) {
+            settingsObserverJob = observeVoipSettingsUseCase()
+                .onEach { settings ->
+                    vibrateOnIncomingCall = settings.vibrateOnIncomingCall
+                    Timber.d("Configuração de vibração atualizada: $vibrateOnIncomingCall")
+                }
+                .launchIn(serviceScope)
+        }
+
         if (observerJob?.isActive == true) {
             Timber.d("Observer já está rodando")
             return
@@ -123,12 +196,16 @@ class VoipForegroundService : Service() {
         when (status) {
             CallStatus.ENDED, CallStatus.IDLE -> {
                 isCallActive = false
+                vibratorManager.stopVibration()
                 notificationManager.dismissCallNotification()
                 wakeLockManager.release()
             }
 
             CallStatus.INCOMING -> {
                 isCallActive = true
+                if (vibrateOnIncomingCall) {
+                    vibratorManager.startRingingVibration()
+                }
                 val number = getCurrentCallNumberUseCase() ?: ""
                 showCallNotification(isIncoming = true)
                 wakeLockManager.acquire()
@@ -142,12 +219,14 @@ class VoipForegroundService : Service() {
 
             CallStatus.DIALING, CallStatus.RINGING -> {
                 isCallActive = true
+                vibratorManager.stopVibration()
                 showCallNotification(isIncoming = false)
                 wakeLockManager.acquire()
             }
 
             CallStatus.ACTIVE -> {
                 isCallActive = true
+                vibratorManager.stopVibration()
                 showCallNotification(isIncoming = false)
                 wakeLockManager.acquire()
             }
@@ -180,6 +259,7 @@ class VoipForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        vibratorManager.stopVibration()
         stopForeground(STOP_FOREGROUND_REMOVE)
         serviceScope.cancel()
         notificationManager.cancelAll()
