@@ -4,8 +4,10 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.valevoip.core.navigation.route.SettingsRoute
 
-fun NavGraphBuilder.configScreen() {
+fun NavGraphBuilder.configScreen(
+    onNavigateToLogin: () -> Unit = {}
+) {
     composable<SettingsRoute> {
-        ConfigScreen()
+        ConfigScreen(onNavigateToLogin = onNavigateToLogin)
     }
 }

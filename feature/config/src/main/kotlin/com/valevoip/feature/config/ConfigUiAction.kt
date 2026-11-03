@@ -8,4 +8,7 @@ sealed interface ConfigUiAction {
     data object DismissClearHistoryDialog : ConfigUiAction
     data object ConfirmClearHistory : ConfigUiAction
     data object ShareDiagnosticReport : ConfigUiAction
+    data object OpenLogoutDialog : ConfigUiAction
+    data object DismissLogoutDialog : ConfigUiAction
+    data object ConfirmLogout : ConfigUiAction
 }

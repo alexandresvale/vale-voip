@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.GraphicEq
@@ -172,6 +173,27 @@ internal fun ConfigLayout(
             )
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Seção Conta & Sessão
+        SectionHeader(title = "CONTA")
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = ValeVoipTheme.extendedColors.cardBackground),
+            border = BorderStroke(1.dp, ValeVoipTheme.extendedColors.cardBorder)
+        ) {
+            SettingsActionRow(
+                icon = Icons.AutoMirrored.Filled.Logout,
+                iconBgColor = ValeVoipTheme.extendedColors.redBg,
+                iconTint = ValeVoipTheme.extendedColors.redFg,
+                title = "Sair da Conta",
+                titleColor = ValeVoipTheme.extendedColors.redFg,
+                subtitle = "Desconectar do ramal e voltar ao login",
+                onClick = { onAction(ConfigUiAction.OpenLogoutDialog) }
+            )
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
     }
 
@@ -184,6 +206,18 @@ internal fun ConfigLayout(
             onDismissRequest = { onAction(ConfigUiAction.DismissClearHistoryDialog) },
             onConfirmationClick = { onAction(ConfigUiAction.ConfirmClearHistory) },
             onDismissClick = { onAction(ConfigUiAction.DismissClearHistoryDialog) }
+        )
+    }
+
+    // Dialog de Confirmação para Sair da Conta
+    if (state.showLogoutDialog) {
+        AlertDialogCompose(
+            dialogTitle = "Sair da Conta",
+            dialogMessage = "Deseja realmente desconectar deste ramal? Suas credenciais serão removidas deste dispositivo.",
+            icon = Icons.Default.Warning,
+            onDismissRequest = { onAction(ConfigUiAction.DismissLogoutDialog) },
+            onConfirmationClick = { onAction(ConfigUiAction.ConfirmLogout) },
+            onDismissClick = { onAction(ConfigUiAction.DismissLogoutDialog) }
         )
     }
 

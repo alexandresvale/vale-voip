@@ -11,7 +11,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 internal fun ConfigScreen(
-    viewModel: ConfigViewModel = hiltViewModel()
+    viewModel: ConfigViewModel = hiltViewModel(),
+    onNavigateToLogin: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -41,6 +42,10 @@ internal fun ConfigScreen(
 
                 is ConfigUiEffect.ShowToast -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                }
+
+                is ConfigUiEffect.NavigateToLogin -> {
+                    onNavigateToLogin()
                 }
             }
         }

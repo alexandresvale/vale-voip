@@ -9,5 +9,6 @@ data class ConfigUiState(
     val registrationState: SipRegistrationState = SipRegistrationState.None,
     val settings: VoipSettings = VoipSettings(),
     val callHistoryCount: Int = 0,
-    val showClearHistoryDialog: Boolean = false
+    val showClearHistoryDialog: Boolean = false,
+    val showLogoutDialog: Boolean = false
 )

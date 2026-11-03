@@ -11,6 +11,7 @@ import com.valevoip.core.domain.usecase.ObserveVoipSettingsUseCase
 import com.valevoip.core.domain.usecase.SetEchoCancellationUseCase
 import com.valevoip.core.domain.usecase.SetVibrateOnCallUseCase
 import com.valevoip.core.domain.usecase.SetWifiOnlyUseCase
+import com.valevoip.core.domain.usecase.UnregisterAccountUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +33,8 @@ class ConfigViewModel @Inject constructor(
     private val setWifiOnlyUseCase: SetWifiOnlyUseCase,
     private val getCallHistoryUseCase: GetCallHistoryUseCase,
     private val clearCallHistoryUseCase: ClearCallHistoryUseCase,
-    private val generateDiagnosticReportUseCase: GenerateDiagnosticReportUseCase
+    private val generateDiagnosticReportUseCase: GenerateDiagnosticReportUseCase,
+    private val unregisterAccountUseCase: UnregisterAccountUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ConfigUiState())
@@ -132,6 +134,19 @@ class ConfigViewModel @Inject constructor(
                 viewModelScope.launch {
                     val report = generateDiagnosticReportUseCase()
                     _uiEffect.emit(ConfigUiEffect.ShareText(report))
+                }
+            }
+            is ConfigUiAction.OpenLogoutDialog -> {
+                _uiState.update { it.copy(showLogoutDialog = true) }
+            }
+            is ConfigUiAction.DismissLogoutDialog -> {
+                _uiState.update { it.copy(showLogoutDialog = false) }
+            }
+            is ConfigUiAction.ConfirmLogout -> {
+                _uiState.update { it.copy(showLogoutDialog = false) }
+                viewModelScope.launch {
+                    unregisterAccountUseCase()
+                    _uiEffect.emit(ConfigUiEffect.NavigateToLogin)
                 }
             }
         }
