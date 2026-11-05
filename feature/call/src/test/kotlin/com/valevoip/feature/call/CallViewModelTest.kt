@@ -1,15 +1,22 @@
 package com.valevoip.feature.call
 
 import androidx.lifecycle.SavedStateHandle
+import com.valevoip.core.domain.model.AudioRoute
+import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.usecase.AnswerCallUseCase
 import com.valevoip.core.domain.usecase.GetCallStatusSyncUseCase
 import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
 import com.valevoip.core.domain.usecase.MakeCallUseCase
+import com.valevoip.core.domain.usecase.ObserveActiveAudioRouteUseCase
+import com.valevoip.core.domain.usecase.ObserveAudioRoutesUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
 import com.valevoip.core.domain.usecase.ObserveMuteStateUseCase
 import com.valevoip.core.domain.usecase.ObserveSpeakerStateUseCase
+import com.valevoip.core.domain.usecase.SelectAudioRouteUseCase
+import com.valevoip.core.domain.usecase.SendDtmfUseCase
+import com.valevoip.core.domain.usecase.ToggleHoldUseCase
 import com.valevoip.core.domain.usecase.ToggleMuteUseCase
 import com.valevoip.core.domain.usecase.ToggleSpeakerUseCase
 import io.mockk.every
@@ -44,10 +51,17 @@ internal class CallViewModelTest {
     private val getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase = mockk()
     private val observeMuteStateUseCase: ObserveMuteStateUseCase = mockk()
     private val observeSpeakerStateUseCase: ObserveSpeakerStateUseCase = mockk()
+    private val observeAudioRoutesUseCase: ObserveAudioRoutesUseCase = mockk()
+    private val observeActiveAudioRouteUseCase: ObserveActiveAudioRouteUseCase = mockk()
+    private val selectAudioRouteUseCase: SelectAudioRouteUseCase = mockk()
+    private val sendDtmfUseCase: SendDtmfUseCase = mockk()
+    private val toggleHoldUseCase: ToggleHoldUseCase = mockk()
 
     private lateinit var callStatusFlow: MutableStateFlow<CallStatus>
     private lateinit var muteStateFlow: MutableStateFlow<Boolean>
     private lateinit var speakerStateFlow: MutableStateFlow<Boolean>
+    private lateinit var audioRoutesFlow: MutableStateFlow<List<AudioRoute>>
+    private lateinit var activeAudioRouteFlow: MutableStateFlow<AudioRoute?>
 
     @Before
     fun setUp() {
@@ -55,10 +69,14 @@ internal class CallViewModelTest {
         callStatusFlow = MutableStateFlow(CallStatus.IDLE)
         muteStateFlow = MutableStateFlow(false)
         speakerStateFlow = MutableStateFlow(false)
+        audioRoutesFlow = MutableStateFlow(emptyList())
+        activeAudioRouteFlow = MutableStateFlow(null)
 
         every { observeCallStateUseCase() } returns callStatusFlow
         every { observeMuteStateUseCase() } returns muteStateFlow
         every { observeSpeakerStateUseCase() } returns speakerStateFlow
+        every { observeAudioRoutesUseCase() } returns audioRoutesFlow
+        every { observeActiveAudioRouteUseCase() } returns activeAudioRouteFlow
         every { getCallStatusSyncUseCase() } returns CallStatus.IDLE
         every { getCurrentCallNumberUseCase() } returns "Desconhecido"
     }
@@ -78,6 +96,18 @@ internal class CallViewModelTest {
 
         assertEquals("2525", viewModel.uiState.value.contactNumber)
         verify(exactly = 1) { makeCallUseCase("2525") }
+    }
+
+    @Test
+    fun `discar ramal alfanumerico alexandreskt16 chama exatamente alexandreskt16`() = runTest {
+        every { makeCallUseCase("alexandreskt16") } returns Result.success(Unit)
+        val viewModel = createViewModel(number = "alexandreskt16")
+
+        viewModel.onEvent(CallUiEvent.OnPermissionGranted)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("alexandreskt16", viewModel.uiState.value.contactNumber)
+        verify(exactly = 1) { makeCallUseCase("alexandreskt16") }
     }
 
     @Test
@@ -162,6 +192,93 @@ internal class CallViewModelTest {
         assertTrue(viewModel.uiState.value.isSpeakerOn)
     }
 
+    @Test
+    fun `OnAudioRouteClick alterna viva-voz diretamente quando so existem EARPIECE e SPEAKER`() = runTest {
+        val earpiece = AudioRoute("earpiece_1", "Telefone", AudioRouteType.EARPIECE)
+        val speaker = AudioRoute("speaker_1", "Viva-voz", AudioRouteType.SPEAKER)
+        audioRoutesFlow.value = listOf(earpiece, speaker)
+        every { toggleSpeakerUseCase() } returns Result.success(true)
+
+        val viewModel = createViewModel(number = "1001")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onEvent(CallUiEvent.OnAudioRouteClick)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isAudioRouteSheetVisible)
+        assertTrue(viewModel.uiState.value.isSpeakerOn)
+        verify(exactly = 1) { toggleSpeakerUseCase() }
+    }
+
+    @Test
+    fun `OnAudioRouteClick abre seletor quando existe dispositivo Bluetooth e OnSelectAudioRoute delega escolha`() = runTest {
+        val earpiece = AudioRoute("earpiece_1", "Telefone", AudioRouteType.EARPIECE)
+        val btHeadset = AudioRoute("bt_1", "Galaxy Buds", AudioRouteType.BLUETOOTH)
+        audioRoutesFlow.value = listOf(earpiece, btHeadset)
+        activeAudioRouteFlow.value = btHeadset
+        every { selectAudioRouteUseCase("earpiece_1") } returns Result.success(Unit)
+
+        val viewModel = createViewModel(number = "1001")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onEvent(CallUiEvent.OnAudioRouteClick)
+        assertTrue(viewModel.uiState.value.isAudioRouteSheetVisible)
+
+        viewModel.onEvent(CallUiEvent.OnSelectAudioRoute("earpiece_1"))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isAudioRouteSheetVisible)
+        verify(exactly = 1) { selectAudioRouteUseCase("earpiece_1") }
+    }
+
+    @Test
+    fun `OnShowKeypad e OnDtmfDigit enviam tons DTMF e acumulam historico na UI`() = runTest {
+        every { sendDtmfUseCase('1') } returns Result.success(Unit)
+        every { sendDtmfUseCase('#') } returns Result.success(Unit)
+
+        val viewModel = createViewModel(number = "1001")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onEvent(CallUiEvent.OnShowKeypad)
+        assertTrue(viewModel.uiState.value.isKeypadVisible)
+
+        viewModel.onEvent(CallUiEvent.OnDtmfDigit('1'))
+        viewModel.onEvent(CallUiEvent.OnDtmfDigit('#'))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("1#", viewModel.uiState.value.dtmfInput)
+        verify(exactly = 1) { sendDtmfUseCase('1') }
+        verify(exactly = 1) { sendDtmfUseCase('#') }
+    }
+
+    @Test
+    fun `OnToggleHold delega ao caso de uso, mantem cronometro em PAUSED e CallStatus ENDED fecha sheets abertos`() = runTest {
+        every { toggleHoldUseCase() } returns Result.success(true)
+
+        val viewModel = createViewModel(number = "1001")
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.onEvent(CallUiEvent.OnShowKeypad)
+        viewModel.onEvent(CallUiEvent.OnToggleHold)
+        callStatusFlow.value = CallStatus.PAUSED
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals(CallStatus.PAUSED, viewModel.uiState.value.callStatus)
+        assertTrue(viewModel.uiState.value.isKeypadVisible)
+        verify(exactly = 1) { toggleHoldUseCase() }
+
+        testDispatcher.scheduler.advanceTimeBy(2_000)
+        testDispatcher.scheduler.runCurrent()
+        assertEquals("00:02", viewModel.uiState.value.formattedDuration)
+
+        callStatusFlow.value = CallStatus.ENDED
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(CallStatus.ENDED, viewModel.uiState.value.callStatus)
+        assertFalse(viewModel.uiState.value.isKeypadVisible)
+        assertFalse(viewModel.uiState.value.isAudioRouteSheetVisible)
+    }
+
     private fun createViewModel(number: String?): CallViewModel {
         val savedStateHandle = if (number != null) {
             SavedStateHandle(mapOf("number" to number))
@@ -179,7 +296,12 @@ internal class CallViewModelTest {
             getCallStatusSyncUseCase = getCallStatusSyncUseCase,
             getCurrentCallNumberUseCase = getCurrentCallNumberUseCase,
             observeMuteStateUseCase = observeMuteStateUseCase,
-            observeSpeakerStateUseCase = observeSpeakerStateUseCase
+            observeSpeakerStateUseCase = observeSpeakerStateUseCase,
+            observeAudioRoutesUseCase = observeAudioRoutesUseCase,
+            observeActiveAudioRouteUseCase = observeActiveAudioRouteUseCase,
+            selectAudioRouteUseCase = selectAudioRouteUseCase,
+            sendDtmfUseCase = sendDtmfUseCase,
+            toggleHoldUseCase = toggleHoldUseCase
         )
     }
 }

@@ -3,15 +3,21 @@ package com.valevoip.feature.call
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.usecase.AnswerCallUseCase
 import com.valevoip.core.domain.usecase.GetCallStatusSyncUseCase
 import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
 import com.valevoip.core.domain.usecase.MakeCallUseCase
+import com.valevoip.core.domain.usecase.ObserveActiveAudioRouteUseCase
+import com.valevoip.core.domain.usecase.ObserveAudioRoutesUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
 import com.valevoip.core.domain.usecase.ObserveMuteStateUseCase
 import com.valevoip.core.domain.usecase.ObserveSpeakerStateUseCase
+import com.valevoip.core.domain.usecase.SelectAudioRouteUseCase
+import com.valevoip.core.domain.usecase.SendDtmfUseCase
+import com.valevoip.core.domain.usecase.ToggleHoldUseCase
 import com.valevoip.core.domain.usecase.ToggleMuteUseCase
 import com.valevoip.core.domain.usecase.ToggleSpeakerUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,7 +43,12 @@ internal class CallViewModel @Inject constructor(
     private val getCallStatusSyncUseCase: GetCallStatusSyncUseCase,
     private val getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase,
     private val observeMuteStateUseCase: ObserveMuteStateUseCase,
-    private val observeSpeakerStateUseCase: ObserveSpeakerStateUseCase
+    private val observeSpeakerStateUseCase: ObserveSpeakerStateUseCase,
+    private val observeAudioRoutesUseCase: ObserveAudioRoutesUseCase,
+    private val observeActiveAudioRouteUseCase: ObserveActiveAudioRouteUseCase,
+    private val selectAudioRouteUseCase: SelectAudioRouteUseCase,
+    private val sendDtmfUseCase: SendDtmfUseCase,
+    private val toggleHoldUseCase: ToggleHoldUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -63,7 +74,22 @@ internal class CallViewModel @Inject constructor(
             CallUiEvent.OnHangup -> performHangup()
             CallUiEvent.OnToggleMute -> performToggleMute()
             CallUiEvent.OnToggleSpeaker -> performToggleSpeaker()
-            CallUiEvent.OnShowKeypad -> Unit
+            CallUiEvent.OnAudioRouteClick -> handleAudioRouteClick()
+            CallUiEvent.OnDismissAudioRouteSheet -> {
+                _uiState.update { it.copy(isAudioRouteSheetVisible = false) }
+            }
+
+            is CallUiEvent.OnSelectAudioRoute -> performSelectAudioRoute(event.routeId)
+            CallUiEvent.OnShowKeypad -> {
+                _uiState.update { it.copy(isKeypadVisible = true) }
+            }
+
+            CallUiEvent.OnDismissKeypad -> {
+                _uiState.update { it.copy(isKeypadVisible = false) }
+            }
+
+            is CallUiEvent.OnDtmfDigit -> performSendDtmf(event.digit)
+            CallUiEvent.OnToggleHold -> performToggleHold()
             CallUiEvent.OnAnswer -> performAnswer()
         }
     }
@@ -72,7 +98,7 @@ internal class CallViewModel @Inject constructor(
         logEvent("Iniciando avaliação de chamada (handleCallInitialization)")
         val number = savedStateHandle.get<String>("number")
 
-        // Proteção: Se já temos uma chamada ativa ou tocando (via SIP),
+        // Proteção: Se já temos uma chamada ativa, pausada ou tocando (via SIP),
         // não devemos iniciar uma nova chamada de saída!
         val currentStatus = getCallStatusSyncUseCase()
         if (currentStatus != CallStatus.IDLE && currentStatus != CallStatus.ENDED) {
@@ -146,6 +172,29 @@ internal class CallViewModel @Inject constructor(
             }
     }
 
+    private fun handleAudioRouteClick() {
+        val routes = _uiState.value.availableAudioRoutes
+        val hasExternalAudioDevice = routes.size > 2 || routes.any {
+            it.type == AudioRouteType.BLUETOOTH || it.type == AudioRouteType.WIRED_HEADSET
+        }
+        if (hasExternalAudioDevice) {
+            _uiState.update { it.copy(isAudioRouteSheetVisible = true) }
+        } else {
+            performToggleSpeaker()
+        }
+    }
+
+    private fun performSelectAudioRoute(routeId: String) {
+        _uiState.update { it.copy(isAudioRouteSheetVisible = false) }
+        selectAudioRouteUseCase(routeId)
+            .onSuccess {
+                logEvent("Rota de áudio selecionada: $routeId")
+            }
+            .onFailure { error ->
+                logEvent("Falha ao selecionar rota de áudio '$routeId': ${error.message}")
+            }
+    }
+
     private fun performToggleSpeaker() {
         val previousSpeakerState = _uiState.value.isSpeakerOn
         _uiState.update { it.copy(isSpeakerOn = !previousSpeakerState) }
@@ -160,6 +209,29 @@ internal class CallViewModel @Inject constructor(
             }
     }
 
+    private fun performSendDtmf(digit: Char) {
+        sendDtmfUseCase(digit)
+            .onSuccess {
+                logEvent("DTMF enviado: $digit")
+                _uiState.update { current ->
+                    current.copy(dtmfInput = (current.dtmfInput + digit).takeLast(MAX_DTMF_DISPLAY_LENGTH))
+                }
+            }
+            .onFailure { error ->
+                logEvent("Falha ao enviar DTMF '$digit': ${error.message}")
+            }
+    }
+
+    private fun performToggleHold() {
+        toggleHoldUseCase()
+            .onSuccess { isOnHold ->
+                logEvent("Estado de espera alternado: emEspera=$isOnHold")
+            }
+            .onFailure { error ->
+                logEvent("Falha ao alternar espera: ${error.message}")
+            }
+    }
+
     private fun observeAudioStates() {
         viewModelScope.launch {
             observeMuteStateUseCase().collect { muted ->
@@ -169,6 +241,16 @@ internal class CallViewModel @Inject constructor(
         viewModelScope.launch {
             observeSpeakerStateUseCase().collect { speakerEnabled ->
                 _uiState.update { it.copy(isSpeakerOn = speakerEnabled) }
+            }
+        }
+        viewModelScope.launch {
+            observeAudioRoutesUseCase().collect { routes ->
+                _uiState.update { it.copy(availableAudioRoutes = routes) }
+            }
+        }
+        viewModelScope.launch {
+            observeActiveAudioRouteUseCase().collect { activeRoute ->
+                _uiState.update { it.copy(activeAudioRoute = activeRoute) }
             }
         }
     }
@@ -184,7 +266,7 @@ internal class CallViewModel @Inject constructor(
     }
 
     private fun startTimer() {
-        // Se o timer já estiver rodando, não reinicia (Evita resetar para 00:00 se o status piscar)
+        // Se o timer já estiver rodando, não reinicia (Evita resetar para 00:00 se o status piscar ou pausar)
         if (timerJob?.isActive == true) return
 
         timerJob = viewModelScope.launch {
@@ -237,13 +319,23 @@ internal class CallViewModel @Inject constructor(
                             hydrateRemoteNumberIfMissing()
                         }
 
-                        CallStatus.ACTIVE -> {
+                        CallStatus.ACTIVE,
+                        CallStatus.PAUSED -> {
                             hasObservedLiveCall = true
                             hydrateRemoteNumberIfMissing()
                             startTimer()
                         }
 
-                        CallStatus.ENDED -> stopTimer()
+                        CallStatus.ENDED -> {
+                            stopTimer()
+                            _uiState.update {
+                                it.copy(
+                                    isKeypadVisible = false,
+                                    isAudioRouteSheetVisible = false
+                                )
+                            }
+                        }
+
                         CallStatus.IDLE -> Unit
                     }
                     _uiState.update { it.copy(callStatus = newStatus) }
@@ -257,5 +349,6 @@ internal class CallViewModel @Inject constructor(
 
     private companion object {
         const val UNKNOWN_CALLER_FALLBACK = "Desconhecido"
+        const val MAX_DTMF_DISPLAY_LENGTH = 32
     }
 }
