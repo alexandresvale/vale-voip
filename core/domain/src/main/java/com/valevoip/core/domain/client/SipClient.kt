@@ -1,5 +1,6 @@
 package com.valevoip.core.domain.client
 
+import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
@@ -23,6 +24,16 @@ interface SipClient {
     val isSpeakerEnabled: StateFlow<Boolean>
 
     /**
+     * Lista reativa das rotas de saída de áudio disponíveis para chamada (Telefone, Viva-voz, Bluetooth, Fone)
+     */
+    val availableAudioRoutes: StateFlow<List<AudioRoute>>
+
+    /**
+     * Rota de saída de áudio ativa no momento
+     */
+    val activeAudioRoute: StateFlow<AudioRoute?>
+
+    /**
      * Inicia o motor SIP com as credenciais informadas.
      */
     suspend fun register(account: SipAccount): Flow<SipRegistrationState>
@@ -35,6 +46,9 @@ interface SipClient {
     fun hangUp(): Result<Unit>
     fun toggleMute(): Result<Unit>
     fun toggleSpeaker(): Result<Boolean>
+    fun selectAudioRoute(routeId: String): Result<Unit>
+    fun sendDtmf(digit: Char): Result<Unit>
+    fun toggleHold(): Result<Boolean>
     fun muteCall(callId: String): Result<Unit>
     fun acceptCall(): Result<Unit>
     fun getCallStatusFlow(): Flow<CallStatus>

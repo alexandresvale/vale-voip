@@ -60,6 +60,9 @@ internal fun HomeScreen(
     SystemBarsController(useDarkIcons = !isSystemInDarkTheme())
 
     val requiredPermissions = mutableListOf(Manifest.permission.RECORD_AUDIO).apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            add(Manifest.permission.BLUETOOTH_CONNECT)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             add(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -68,7 +71,11 @@ internal fun HomeScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { permissions ->
-            val isAudioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
+            val isAudioGranted = permissions[Manifest.permission.RECORD_AUDIO]
+                ?: (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED)
             if (isAudioGranted) {
                 startMonitoringService(context)
             }
@@ -77,11 +84,18 @@ internal fun HomeScreen(
     )
 
     LaunchedEffect(Unit) {
+        val isAudioGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+        if (isAudioGranted) {
+            startMonitoringService(context)
+        }
+
         val hasAllPermissions = requiredPermissions.all { permission ->
             ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         }
         if (hasAllPermissions) {
-            startMonitoringService(context)
             homeViewModel.checkBatteryOptimizationOnce()
         } else {
             permissionLauncher.launch(requiredPermissions)

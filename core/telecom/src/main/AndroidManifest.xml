@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permissões essenciais para áudio e chamadas SIP (VoIP) -->
+    <!-- Permissões essenciais para áudio, Bluetooth (API 31+) e chamadas SIP (VoIP) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Permissões para Foreground Service, Resiliência Local e TelecomManager -->

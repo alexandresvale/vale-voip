@@ -3,6 +3,7 @@ package com.valevoip.core.domain.usecase
 import com.valevoip.core.domain.client.NetworkConnectivityProvider
 import com.valevoip.core.domain.client.NetworkConnectivityState
 import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
@@ -49,6 +50,25 @@ class MakeCallUseCaseTest {
     }
 
     @Test
+    fun `should make call successfully to alphanumeric SIP username and trim whitespace`() {
+        fakeSettingsRepository.currentSettings = VoipSettings(useWifiOnly = false)
+
+        val result = makeCallUseCase("  alexandreskt16  ")
+
+        assertTrue(result.isSuccess)
+        assertEquals("alexandreskt16", fakeSipClient.lastCalledNumber)
+    }
+
+    @Test
+    fun `should fail with IllegalArgumentException when target is blank`() {
+        val result = makeCallUseCase("   ")
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertEquals(null, fakeSipClient.lastCalledNumber)
+    }
+
+    @Test
     fun `should make call successfully when wifi only is enabled and connected to wifi`() {
         fakeSettingsRepository.currentSettings = VoipSettings(useWifiOnly = true)
         fakeNetworkConnectivityProvider.isWifiConnected = true
@@ -90,6 +110,8 @@ class MakeCallUseCaseTest {
         override val registrationState: StateFlow<SipRegistrationState> = MutableStateFlow(SipRegistrationState.None)
         override val isMuted: StateFlow<Boolean> = MutableStateFlow(false)
         override val isSpeakerEnabled: StateFlow<Boolean> = MutableStateFlow(false)
+        override val availableAudioRoutes: StateFlow<List<AudioRoute>> = MutableStateFlow(emptyList())
+        override val activeAudioRoute: StateFlow<AudioRoute?> = MutableStateFlow(null)
         override suspend fun register(account: SipAccount): Flow<SipRegistrationState> = emptyFlow()
         override suspend fun unregister(): Flow<SipRegistrationState> = emptyFlow()
 
@@ -105,6 +127,9 @@ class MakeCallUseCaseTest {
         override fun hangUp(): Result<Unit> = Result.success(Unit)
         override fun toggleMute(): Result<Unit> = Result.success(Unit)
         override fun toggleSpeaker(): Result<Boolean> = Result.success(true)
+        override fun selectAudioRoute(routeId: String): Result<Unit> = Result.success(Unit)
+        override fun sendDtmf(digit: Char): Result<Unit> = Result.success(Unit)
+        override fun toggleHold(): Result<Boolean> = Result.success(true)
         override fun muteCall(callId: String): Result<Unit> = Result.success(Unit)
         override fun acceptCall(): Result<Unit> = Result.success(Unit)
         override fun getCallStatusFlow(): Flow<CallStatus> = emptyFlow()

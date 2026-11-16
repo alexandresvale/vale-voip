@@ -10,19 +10,19 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipRegistrationState
 import com.valevoip.core.domain.usecase.AnswerCallUseCase
 import com.valevoip.core.domain.usecase.GetAccountUseCase
 import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
+import com.valevoip.core.domain.usecase.ObserveActiveAudioRouteUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
 import com.valevoip.core.domain.usecase.ObserveRegistrationStateUseCase
 import com.valevoip.core.domain.usecase.ObserveSpeakerStateUseCase
 import com.valevoip.core.domain.usecase.ObserveVoipSettingsUseCase
 import com.valevoip.core.domain.usecase.RegisterAccountUseCase
-import com.valevoip.core.navigation.NavigationCommand
-import com.valevoip.core.navigation.NavigationCommandBus
 import com.valevoip.core.telecom.notification.VoipNotificationManager
 import com.valevoip.core.telecom.vibration.VoipVibratorManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -58,13 +58,13 @@ class VoipForegroundService : Service() {
     lateinit var observeRegistrationStateUseCase: ObserveRegistrationStateUseCase
 
     @Inject
+    lateinit var observeActiveAudioRouteUseCase: ObserveActiveAudioRouteUseCase
+
+    @Inject
     lateinit var observeSpeakerStateUseCase: ObserveSpeakerStateUseCase
 
     @Inject
     lateinit var registerAccountUseCase: RegisterAccountUseCase
-
-    @Inject
-    lateinit var navigationCommandBus: NavigationCommandBus
 
     @Inject
     lateinit var getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase
@@ -203,15 +203,24 @@ class VoipForegroundService : Service() {
         if (proximityObserverJob?.isActive != true) {
             proximityObserverJob = combine(
                 observeCallStateUseCase(),
+                observeActiveAudioRouteUseCase(),
                 observeSpeakerStateUseCase()
-            ) { status, isSpeakerEnabled ->
+            ) { status, activeRoute, isSpeakerEnabled ->
+                val isEarpieceActive = when (activeRoute?.type) {
+                    AudioRouteType.EARPIECE -> true
+                    AudioRouteType.SPEAKER,
+                    AudioRouteType.BLUETOOTH,
+                    AudioRouteType.WIRED_HEADSET -> false
+                    null -> !isSpeakerEnabled
+                }
                 when (status) {
                     CallStatus.DIALING,
                     CallStatus.RINGING,
-                    CallStatus.ACTIVE -> !isSpeakerEnabled
+                    CallStatus.ACTIVE -> isEarpieceActive
 
                     CallStatus.IDLE,
                     CallStatus.INCOMING,
+                    CallStatus.PAUSED,
                     CallStatus.ENDED -> false
                 }
             }
@@ -252,9 +261,6 @@ class VoipForegroundService : Service() {
                 }
                 val number = getCurrentCallNumberUseCase()
                 showCallNotification(number = number, isIncoming = true)
-
-                // Dispara comando de navegação: abre imediato em foreground ou aguarda em buffer até abertura pela notificação
-                navigationCommandBus.navigate(NavigationCommand.ToCall(number))
             }
 
             CallStatus.DIALING,
@@ -272,6 +278,14 @@ class VoipForegroundService : Service() {
                 promoteServiceForeground(inCall = true, needsMicrophone = true)
                 val number = getCurrentCallNumberUseCase()
                 showCallNotification(number = number, isIncoming = false)
+            }
+
+            CallStatus.PAUSED -> {
+                isCallActive = true
+                vibratorManager.stopVibration()
+                promoteServiceForeground(inCall = true, needsMicrophone = false)
+                val number = getCurrentCallNumberUseCase()
+                showCallNotification(number = number, isIncoming = false, isOnHold = true)
             }
         }
     }
@@ -345,12 +359,17 @@ class VoipForegroundService : Service() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun showCallNotification(number: String, isIncoming: Boolean) {
-        Timber.d("Exibindo notificação de chamada para $number (incoming=$isIncoming)")
+    private fun showCallNotification(
+        number: String,
+        isIncoming: Boolean,
+        isOnHold: Boolean = false
+    ) {
+        Timber.d("Exibindo notificação de chamada para $number (incoming=$isIncoming, onHold=$isOnHold)")
         notificationManager.showCallNotification(
             contactName = number,
             isIncoming = isIncoming,
-            serviceClass = VoipForegroundService::class.java
+            serviceClass = VoipForegroundService::class.java,
+            isOnHold = isOnHold
         )
     }
 

@@ -2,6 +2,8 @@ package com.valevoip.core.domain.usecase
 
 import com.valevoip.core.domain.client.BatteryOptimizationProvider
 import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.model.AudioRoute
+import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
@@ -37,6 +39,11 @@ class TelephonyUseCasesTest {
     private lateinit var observeCallStateUseCase: ObserveCallStateUseCase
     private lateinit var observeMuteStateUseCase: ObserveMuteStateUseCase
     private lateinit var observeSpeakerStateUseCase: ObserveSpeakerStateUseCase
+    private lateinit var observeAudioRoutesUseCase: ObserveAudioRoutesUseCase
+    private lateinit var observeActiveAudioRouteUseCase: ObserveActiveAudioRouteUseCase
+    private lateinit var selectAudioRouteUseCase: SelectAudioRouteUseCase
+    private lateinit var sendDtmfUseCase: SendDtmfUseCase
+    private lateinit var toggleHoldUseCase: ToggleHoldUseCase
     private lateinit var isIgnoringBatteryOptimizationsUseCase: IsIgnoringBatteryOptimizationsUseCase
     private lateinit var getAccountUseCase: GetAccountUseCase
     private lateinit var unregisterAccountUseCase: UnregisterAccountUseCase
@@ -59,6 +66,11 @@ class TelephonyUseCasesTest {
         observeCallStateUseCase = ObserveCallStateUseCase(fakeSipClient)
         observeMuteStateUseCase = ObserveMuteStateUseCase(fakeSipClient)
         observeSpeakerStateUseCase = ObserveSpeakerStateUseCase(fakeSipClient)
+        observeAudioRoutesUseCase = ObserveAudioRoutesUseCase(fakeSipClient)
+        observeActiveAudioRouteUseCase = ObserveActiveAudioRouteUseCase(fakeSipClient)
+        selectAudioRouteUseCase = SelectAudioRouteUseCase(fakeSipClient)
+        sendDtmfUseCase = SendDtmfUseCase(fakeSipClient)
+        toggleHoldUseCase = ToggleHoldUseCase(fakeSipClient)
         isIgnoringBatteryOptimizationsUseCase = IsIgnoringBatteryOptimizationsUseCase(fakeBatteryOptimizationProvider)
         getAccountUseCase = GetAccountUseCase(fakeAccountRepository)
         unregisterAccountUseCase = UnregisterAccountUseCase(fakeSipClient, fakeAccountRepository, testDispatcher)
@@ -92,6 +104,54 @@ class TelephonyUseCasesTest {
         assertTrue(result.isSuccess)
         assertTrue(result.getOrNull() == true)
         assertTrue(fakeSipClient.speakerToggled)
+    }
+
+    @Test
+    fun `toggleHold delegates to sipClient toggleHold`() {
+        val result = toggleHoldUseCase()
+        assertTrue(result.isSuccess)
+        assertEquals(true, result.getOrNull())
+        assertTrue(fakeSipClient.holdToggled)
+    }
+
+    @Test
+    fun `sendDtmf accepts valid RFC 4733 digits and normalizes lowercase a-d`() {
+        assertTrue(sendDtmfUseCase('5').isSuccess)
+        assertEquals('5', fakeSipClient.lastDtmfDigit)
+
+        assertTrue(sendDtmfUseCase('#').isSuccess)
+        assertEquals('#', fakeSipClient.lastDtmfDigit)
+
+        assertTrue(sendDtmfUseCase('b').isSuccess)
+        assertEquals('B', fakeSipClient.lastDtmfDigit)
+    }
+
+    @Test
+    fun `sendDtmf rejects invalid character with IllegalArgumentException`() {
+        val result = sendDtmfUseCase('Z')
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun `selectAudioRoute delegates valid routeId and rejects blank routeId`() {
+        val validResult = selectAudioRouteUseCase("bt_headset_1")
+        assertTrue(validResult.isSuccess)
+        assertEquals("bt_headset_1", fakeSipClient.lastSelectedRouteId)
+
+        val blankResult = selectAudioRouteUseCase("   ")
+        assertTrue(blankResult.isFailure)
+        assertTrue(blankResult.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun `observeAudioRoutes and observeActiveAudioRoute emit flows from sipClient`() = runTest {
+        val btRoute = AudioRoute("bt_1", "Galaxy Buds", AudioRouteType.BLUETOOTH)
+        fakeSipClient.availableAudioRoutesFlow.value = listOf(btRoute)
+        fakeSipClient.activeAudioRouteFlow.value = btRoute
+
+        assertEquals(listOf(btRoute), observeAudioRoutesUseCase().first())
+        assertEquals(btRoute, observeActiveAudioRouteUseCase().first())
     }
 
     @Test
@@ -176,18 +236,25 @@ class TelephonyUseCasesTest {
         var hungUp = false
         var mutedToggled = false
         var speakerToggled = false
+        var holdToggled = false
+        var lastDtmfDigit: Char? = null
+        var lastSelectedRouteId: String? = null
         var currentStatus = CallStatus.IDLE
         var currentNumber: String? = null
         val callStatusFlow = MutableStateFlow(CallStatus.IDLE)
         val registrationStateFlow = MutableStateFlow<SipRegistrationState>(SipRegistrationState.None)
         val isMutedFlow = MutableStateFlow(false)
         val isSpeakerEnabledFlow = MutableStateFlow(false)
+        val availableAudioRoutesFlow = MutableStateFlow<List<AudioRoute>>(emptyList())
+        val activeAudioRouteFlow = MutableStateFlow<AudioRoute?>(null)
         var unregisterEmission: Flow<SipRegistrationState> = emptyFlow()
         var unregisterShouldThrow = false
 
         override val registrationState: StateFlow<SipRegistrationState> = registrationStateFlow
         override val isMuted: StateFlow<Boolean> = isMutedFlow
         override val isSpeakerEnabled: StateFlow<Boolean> = isSpeakerEnabledFlow
+        override val availableAudioRoutes: StateFlow<List<AudioRoute>> = availableAudioRoutesFlow
+        override val activeAudioRoute: StateFlow<AudioRoute?> = activeAudioRouteFlow
         override suspend fun register(account: SipAccount): Flow<SipRegistrationState> = emptyFlow()
         override suspend fun unregister(): Flow<SipRegistrationState> {
             if (unregisterShouldThrow) throw IllegalStateException("Network Error")
@@ -197,6 +264,18 @@ class TelephonyUseCasesTest {
         override fun hangUp(): Result<Unit> { hungUp = true; return Result.success(Unit) }
         override fun toggleMute(): Result<Unit> { mutedToggled = true; return Result.success(Unit) }
         override fun toggleSpeaker(): Result<Boolean> { speakerToggled = true; return Result.success(true) }
+        override fun selectAudioRoute(routeId: String): Result<Unit> {
+            lastSelectedRouteId = routeId
+            return Result.success(Unit)
+        }
+        override fun sendDtmf(digit: Char): Result<Unit> {
+            lastDtmfDigit = digit
+            return Result.success(Unit)
+        }
+        override fun toggleHold(): Result<Boolean> {
+            holdToggled = true
+            return Result.success(true)
+        }
         override fun muteCall(callId: String): Result<Unit> = Result.success(Unit)
         override fun acceptCall(): Result<Unit> { acceptedCall = true; return Result.success(Unit) }
         override fun getCallStatusFlow(): Flow<CallStatus> = callStatusFlow

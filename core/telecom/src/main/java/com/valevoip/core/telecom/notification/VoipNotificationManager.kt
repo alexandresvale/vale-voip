@@ -93,7 +93,8 @@ class VoipNotificationManager @Inject constructor(
     fun buildCallNotification(
         contactName: String,
         isIncoming: Boolean,
-        serviceClass: Class<*>
+        serviceClass: Class<*>,
+        isOnHold: Boolean = false
     ): Notification {
         val uriString = if (contactName.isNotBlank()) {
             "valevoip://call?number=${Uri.encode(contactName)}"
@@ -112,18 +113,24 @@ class VoipNotificationManager @Inject constructor(
         )
 
         val displayContact = contactName.ifBlank { "Número desconhecido" }
+        val statusTitle = when {
+            isIncoming -> "Chamada Recebida"
+            isOnHold -> "Chamada em Espera"
+            else -> "Em Chamada"
+        }
 
         val builder = NotificationCompat.Builder(context, CALL_CHANNEL_ID)
             .setSmallIcon(R.drawable.logo_vale_voip)
-            .setContentTitle(if (isIncoming) "Chamada Recebida" else "Em Chamada")
+            .setContentTitle(statusTitle)
             .setContentText(displayContact)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(pendingOpenApp)
             .setOngoing(true)
             .setAutoCancel(false)
 
-        if (!isIncoming) {
+        if (!isIncoming && !isOnHold) {
             builder.setUsesChronometer(true)
         }
 
@@ -132,8 +139,18 @@ class VoipNotificationManager @Inject constructor(
         return builder.build()
     }
 
-    fun showCallNotification(contactName: String, isIncoming: Boolean, serviceClass: Class<*>) {
-        val notification = buildCallNotification(contactName, isIncoming, serviceClass)
+    fun showCallNotification(
+        contactName: String,
+        isIncoming: Boolean,
+        serviceClass: Class<*>,
+        isOnHold: Boolean = false
+    ) {
+        val notification = buildCallNotification(
+            contactName = contactName,
+            isIncoming = isIncoming,
+            serviceClass = serviceClass,
+            isOnHold = isOnHold
+        )
         notificationManager.notify(CALL_NOTIFICATION_ID, notification)
     }
 
@@ -160,7 +177,7 @@ class VoipNotificationManager @Inject constructor(
             context,
             1,
             hangupIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val hangupText = if (isIncoming) "Rejeitar" else "Desligar"
@@ -174,7 +191,7 @@ class VoipNotificationManager @Inject constructor(
                 context,
                 2,
                 answerIntent,
-                PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
             builder.addAction(0, "Atender", pendingAnswer)
         }

@@ -4,6 +4,8 @@ import android.content.Context
 import com.valevoip.core.domain.client.SipClient
 import com.valevoip.core.domain.di.IoDispatcher
 import com.valevoip.core.domain.di.MainDispatcher
+import com.valevoip.core.domain.model.AudioRoute
+import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallDirection
 import com.valevoip.core.domain.model.CallHistoryItem
 import com.valevoip.core.domain.model.CallHistoryStatus
@@ -52,6 +54,12 @@ internal class LinphoneSipClient(
     private val _isSpeakerEnabled = MutableStateFlow(false)
     override val isSpeakerEnabled: StateFlow<Boolean> = _isSpeakerEnabled.asStateFlow()
 
+    private val _availableAudioRoutes = MutableStateFlow<List<AudioRoute>>(emptyList())
+    override val availableAudioRoutes: StateFlow<List<AudioRoute>> = _availableAudioRoutes.asStateFlow()
+
+    private val _activeAudioRoute = MutableStateFlow<AudioRoute?>(null)
+    override val activeAudioRoute: StateFlow<AudioRoute?> = _activeAudioRoute.asStateFlow()
+
     private val _callStatus = MutableStateFlow(CallStatus.IDLE)
 
     private var linphoneCore: Core? = null
@@ -69,6 +77,7 @@ internal class LinphoneSipClient(
         linphoneCore?.isVideoDisplayEnabled = false
 
         val natPolicy = linphoneCore?.createNatPolicy()
+        natPolicy?.isStunEnabled = true
         natPolicy?.isIceEnabled = true
         natPolicy?.stunServer = "stun.linphone.org"
 
@@ -94,16 +103,21 @@ internal class LinphoneSipClient(
                 }
             }
 
+            override fun onAudioDevicesListUpdated(core: Core) {
+                Timber.d("Lista de dispositivos de áudio atualizada pelo sistema")
+                refreshAudioRoutes(core)
+            }
+
             override fun onAudioDeviceChanged(core: Core, audioDevice: AudioDevice) {
-                val speakerActive = audioDevice.type == AudioDevice.Type.Speaker
-                Timber.d("AudioDevice alterado: type=${audioDevice.type} | speaker=$speakerActive")
-                _isSpeakerEnabled.value = speakerActive
+                Timber.d("AudioDevice alterado: type=${audioDevice.type} | name=${audioDevice.deviceName}")
+                refreshAudioRoutes(core, explicitActiveDevice = audioDevice)
             }
 
             override fun onLastCallEnded(core: Core) {
                 Timber.d("onLastCallEnded: resetando estado de microfone e viva-voz")
                 _isMuted.value = false
                 _isSpeakerEnabled.value = false
+                refreshAudioRoutes(core)
             }
 
             override fun onCallStateChanged(
@@ -115,15 +129,39 @@ internal class LinphoneSipClient(
                 Timber.d("CallState = $state | Message = $message")
                 when (state) {
                     Call.State.OutgoingInit,
-                    Call.State.OutgoingProgress -> _callStatus.value = CallStatus.DIALING
+                    Call.State.OutgoingProgress -> {
+                        refreshAudioRoutes(core)
+                        _callStatus.value = CallStatus.DIALING
+                    }
 
-                    Call.State.OutgoingRinging -> _callStatus.value = CallStatus.RINGING
-                    Call.State.IncomingReceived -> _callStatus.value = CallStatus.INCOMING
+                    Call.State.OutgoingRinging,
+                    Call.State.OutgoingEarlyMedia -> {
+                        refreshAudioRoutes(core)
+                        _callStatus.value = CallStatus.RINGING
+                    }
+
+                    Call.State.IncomingReceived,
+                    Call.State.IncomingEarlyMedia -> {
+                        refreshAudioRoutes(core)
+                        _callStatus.value = CallStatus.INCOMING
+                    }
+
                     Call.State.Connected,
-                    Call.State.StreamsRunning -> {
+                    Call.State.StreamsRunning,
+                    Call.State.PausedByRemote,
+                    Call.State.Updating,
+                    Call.State.UpdatedByRemote -> {
                         _isMuted.value = call.microphoneMuted
-                        _isSpeakerEnabled.value = call.outputAudioDevice?.type == AudioDevice.Type.Speaker
+                        refreshAudioRoutes(core, explicitActiveDevice = call.outputAudioDevice)
                         _callStatus.value = CallStatus.ACTIVE
+                    }
+
+                    Call.State.Pausing,
+                    Call.State.Paused,
+                    Call.State.Resuming -> {
+                        _isMuted.value = call.microphoneMuted
+                        refreshAudioRoutes(core, explicitActiveDevice = call.outputAudioDevice)
+                        _callStatus.value = CallStatus.PAUSED
                     }
 
                     Call.State.End,
@@ -133,15 +171,21 @@ internal class LinphoneSipClient(
                             _isMuted.value = false
                             _isSpeakerEnabled.value = false
                         }
+                        refreshAudioRoutes(core)
                         _callStatus.value = CallStatus.ENDED
                     }
 
-                    else -> Unit
+                    Call.State.Idle,
+                    Call.State.PushIncomingReceived,
+                    Call.State.Referred,
+                    Call.State.EarlyUpdatedByRemote,
+                    Call.State.EarlyUpdating -> Unit
                 }
             }
         })
 
         observeSettings()
+        linphoneCore?.let { refreshAudioRoutes(it) }
     }
 
     private fun observeSettings() {
@@ -200,6 +244,8 @@ internal class LinphoneSipClient(
             val serverAddress = Factory.instance().createAddress("sip:${account.domain}")
             serverAddress?.transport = transportConfiguration.linphoneTransport
             accountParams.serverAddress = serverAddress
+            accountParams.isOutboundProxyEnabled = true
+            accountParams.natPolicy = core.natPolicy
             accountParams.isRegisterEnabled = true
 
             val linphoneAccount = core.createAccount(accountParams)
@@ -252,14 +298,23 @@ internal class LinphoneSipClient(
     override fun makeCall(number: String): Result<Unit> {
         return try {
             val core = linphoneCore ?: throw IllegalStateException("Core is null")
-            val defaultProxy = core.defaultAccount ?: throw IllegalStateException("No default account")
+            val defaultAccount = core.defaultAccount ?: throw IllegalStateException("No default account")
+            val cleanTarget = number.trim()
+            if (cleanTarget.isBlank()) {
+                throw IllegalArgumentException("Destino da chamada não pode ser vazio")
+            }
 
-            // Montar o endereço de destino com base no domínio da conta
-            val domain = defaultProxy.params.serverAddress?.domain ?: ""
-            val address = Factory.instance().createAddress("sip:$number@$domain")
-                ?: throw IllegalArgumentException("Invalid address")
+            // interpretUrl resolve ramais numéricos (2525), usernames alfanuméricos (valevoip, alexandreskt16)
+            // aplicando o domínio da conta padrão, além de URIs SIP completas (usuario@dominio).
+            val address = core.interpretUrl(cleanTarget, false)
+                ?: run {
+                    val domain = defaultAccount.params.serverAddress?.domain.orEmpty()
+                    Factory.instance().createAddress("sip:$cleanTarget@$domain")
+                }
+                ?: throw IllegalArgumentException("Endereço SIP inválido: $cleanTarget")
 
             core.inviteAddress(address)
+                ?: throw IllegalStateException("Não foi possível iniciar a chamada para $cleanTarget")
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -268,7 +323,8 @@ internal class LinphoneSipClient(
 
     override fun hangUp(): Result<Unit> {
         return try {
-            val call = linphoneCore?.currentCall
+            val core = linphoneCore ?: throw IllegalStateException("Core is null")
+            val call = resolveActiveOrPausedCall(core)
             if (call != null) {
                 call.terminate()
                 Result.success(Unit)
@@ -283,7 +339,7 @@ internal class LinphoneSipClient(
     override fun toggleMute(): Result<Unit> {
         return try {
             val core = linphoneCore ?: throw IllegalStateException("Core is null")
-            val call = core.currentCall ?: throw IllegalStateException("No active call")
+            val call = resolveActiveOrPausedCall(core) ?: throw IllegalStateException("No active call")
             call.microphoneMuted = !call.microphoneMuted
             _isMuted.value = call.microphoneMuted
             Result.success(Unit)
@@ -295,22 +351,104 @@ internal class LinphoneSipClient(
     override fun toggleSpeaker(): Result<Boolean> {
         return try {
             val core = linphoneCore ?: throw IllegalStateException("Core is null")
-            val call = core.currentCall ?: throw IllegalStateException("No active call")
-
-            // Get the currently used audio device
-            val currentAudioDevice = call.outputAudioDevice
+            val call = resolveActiveOrPausedCall(core)
+            val currentAudioDevice = call?.outputAudioDevice ?: core.outputAudioDevice
             val speakerEnabled = currentAudioDevice?.type == AudioDevice.Type.Speaker
             val targetType = if (speakerEnabled) AudioDevice.Type.Earpiece else AudioDevice.Type.Speaker
 
-            // We can get a list of all available audio devices using audioDevices
-            val targetDevice = core.audioDevices.firstOrNull { it.type == targetType }
+            val targetDevice = core.audioDevices.firstOrNull { device ->
+                device.type == targetType && device.hasCapability(AudioDevice.Capabilities.CapabilityPlay)
+            }
             if (targetDevice != null) {
-                call.outputAudioDevice = targetDevice
+                applyAudioRoute(core = core, call = call, targetOutputDevice = targetDevice)
                 val newState = targetType == AudioDevice.Type.Speaker
-                _isSpeakerEnabled.value = newState
                 Result.success(newState)
             } else {
                 Result.failure(Exception("Dispositivo de áudio não suportado ou não encontrado."))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun selectAudioRoute(routeId: String): Result<Unit> {
+        return try {
+            val core = linphoneCore ?: throw IllegalStateException("Core is null")
+            val call = resolveActiveOrPausedCall(core)
+            val targetDevice = core.audioDevices.firstOrNull { device ->
+                device.id == routeId && device.hasCapability(AudioDevice.Capabilities.CapabilityPlay)
+            } ?: throw NoSuchElementException("Rota de áudio '$routeId' não disponível.")
+
+            applyAudioRoute(core = core, call = call, targetOutputDevice = targetDevice)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun sendDtmf(digit: Char): Result<Unit> {
+        return try {
+            val core = linphoneCore ?: throw IllegalStateException("Core is null")
+            val call = resolveActiveOrPausedCall(core)
+                ?: throw IllegalStateException("Nenhuma chamada ativa para envio de DTMF.")
+
+            core.playDtmf(digit, DTMF_TONE_DURATION_MS)
+            val resultCode = call.sendDtmf(digit)
+            if (resultCode != 0) {
+                throw IllegalStateException("Falha ao enviar dígito DTMF '$digit' (código=$resultCode).")
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun toggleHold(): Result<Boolean> {
+        return try {
+            val core = linphoneCore ?: throw IllegalStateException("Core is null")
+            val call = resolveActiveOrPausedCall(core)
+                ?: throw IllegalStateException("Nenhuma chamada ativa para alternar espera.")
+
+            when (call.state) {
+                Call.State.Paused -> {
+                    val resultCode = call.resume()
+                    if (resultCode != 0) {
+                        throw IllegalStateException("Falha ao retomar a chamada (código=$resultCode).")
+                    }
+                    Result.success(false)
+                }
+
+                Call.State.StreamsRunning,
+                Call.State.Connected,
+                Call.State.UpdatedByRemote -> {
+                    val resultCode = call.pause()
+                    if (resultCode != 0) {
+                        throw IllegalStateException("Falha ao colocar a chamada em espera (código=$resultCode).")
+                    }
+                    Result.success(true)
+                }
+
+                Call.State.Pausing -> Result.success(true)
+                Call.State.Resuming -> Result.success(false)
+
+                Call.State.Idle,
+                Call.State.IncomingReceived,
+                Call.State.PushIncomingReceived,
+                Call.State.OutgoingInit,
+                Call.State.OutgoingProgress,
+                Call.State.OutgoingRinging,
+                Call.State.OutgoingEarlyMedia,
+                Call.State.PausedByRemote,
+                Call.State.Updating,
+                Call.State.End,
+                Call.State.Released,
+                Call.State.Error,
+                Call.State.Referred,
+                Call.State.IncomingEarlyMedia,
+                Call.State.EarlyUpdatedByRemote,
+                Call.State.EarlyUpdating -> throw IllegalStateException(
+                    "A chamada não pode alternar espera no estado atual (${call.state})."
+                )
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -323,7 +461,8 @@ internal class LinphoneSipClient(
 
     override fun acceptCall(): Result<Unit> {
         return try {
-            val call = linphoneCore?.currentCall ?: throw IllegalStateException("No incoming call")
+            val core = linphoneCore ?: throw IllegalStateException("Core is null")
+            val call = resolveActiveOrPausedCall(core) ?: throw IllegalStateException("No incoming call")
             call.accept()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -334,13 +473,151 @@ internal class LinphoneSipClient(
     override fun getCallStatusFlow(): Flow<CallStatus> = _callStatus.asStateFlow()
 
     override fun getCurrentCallNumber(): String? {
-        return linphoneCore?.currentCall?.remoteAddress?.username
+        val core = linphoneCore ?: return null
+        return resolveActiveOrPausedCall(core)?.remoteAddress?.username
     }
 
     override fun getSynchronousCallStatus(): CallStatus = _callStatus.value
 
     override fun getLinphoneVersion(): String {
         return linphoneCore?.version ?: "Desconhecido"
+    }
+
+    /**
+     * Na liblinphone, [Core.getCurrentCall] retorna null quando a única chamada existente está em
+     * [Call.State.Paused]. Este helper garante que operações de retomada, desligamento, DTMF e áudio
+     * localizem a chamada mesmo enquanto pausada.
+     */
+    private fun resolveActiveOrPausedCall(core: Core): Call? {
+        return core.currentCall ?: core.calls.firstOrNull()
+    }
+
+    private fun applyAudioRoute(core: Core, call: Call?, targetOutputDevice: AudioDevice) {
+        if (call != null) {
+            call.outputAudioDevice = targetOutputDevice
+        } else {
+            core.outputAudioDevice = targetOutputDevice
+        }
+
+        // Sincroniza o dispositivo de captura (microfone) correspondente para evitar captação do bolso em fones Bluetooth/USB
+        val matchingInput = resolveMatchingInputDevice(core, targetOutputDevice)
+        if (matchingInput != null) {
+            if (call != null) {
+                call.inputAudioDevice = matchingInput
+            } else {
+                core.inputAudioDevice = matchingInput
+            }
+        }
+
+        refreshAudioRoutes(core, explicitActiveDevice = targetOutputDevice)
+    }
+
+    private fun resolveMatchingInputDevice(core: Core, targetOutputDevice: AudioDevice): AudioDevice? {
+        if (targetOutputDevice.hasCapability(AudioDevice.Capabilities.CapabilityRecord)) {
+            return targetOutputDevice
+        }
+
+        val recordDevices = core.extendedAudioDevices.filter {
+            it.hasCapability(AudioDevice.Capabilities.CapabilityRecord)
+        }
+
+        return when (targetOutputDevice.type) {
+            AudioDevice.Type.Bluetooth,
+            AudioDevice.Type.HearingAid,
+            AudioDevice.Type.Headset,
+            AudioDevice.Type.GenericUsb -> {
+                recordDevices.firstOrNull {
+                    it.type == targetOutputDevice.type && it.deviceName == targetOutputDevice.deviceName
+                } ?: recordDevices.firstOrNull {
+                    it.type == targetOutputDevice.type
+                } ?: recordDevices.firstOrNull {
+                    it.type == AudioDevice.Type.Microphone
+                }
+            }
+
+            AudioDevice.Type.Earpiece,
+            AudioDevice.Type.Speaker,
+            AudioDevice.Type.Headphones,
+            AudioDevice.Type.Unknown,
+            AudioDevice.Type.Microphone,
+            AudioDevice.Type.BluetoothA2DP,
+            AudioDevice.Type.Telephony,
+            AudioDevice.Type.AuxLine,
+            AudioDevice.Type.Hdmi -> {
+                recordDevices.firstOrNull { it.type == AudioDevice.Type.Microphone }
+            }
+        }
+    }
+
+    private fun refreshAudioRoutes(core: Core, explicitActiveDevice: AudioDevice? = null) {
+        val routes = core.audioDevices
+            .filter { it.hasCapability(AudioDevice.Capabilities.CapabilityPlay) }
+            .mapNotNull { it.toDomainAudioRoute() }
+            .distinctBy { it.id }
+            .sortedBy { it.type.sortOrder() }
+
+        _availableAudioRoutes.value = routes
+
+        val currentOutputDevice = explicitActiveDevice?.takeIf {
+            it.hasCapability(AudioDevice.Capabilities.CapabilityPlay)
+        }
+            ?: resolveActiveOrPausedCall(core)?.outputAudioDevice
+            ?: core.outputAudioDevice
+            ?: core.defaultOutputAudioDevice
+
+        val resolvedActiveRoute = currentOutputDevice?.toDomainAudioRoute()?.let { candidate ->
+            routes.firstOrNull { it.id == candidate.id } ?: candidate
+        }
+            ?: routes.firstOrNull { it.type == AudioRouteType.EARPIECE }
+            ?: routes.firstOrNull()
+
+        _activeAudioRoute.value = resolvedActiveRoute
+        _isSpeakerEnabled.value = resolvedActiveRoute?.type == AudioRouteType.SPEAKER
+    }
+
+    private fun AudioDevice.toDomainAudioRoute(): AudioRoute? {
+        return when (type) {
+            AudioDevice.Type.Earpiece -> AudioRoute(
+                id = id,
+                name = "Telefone",
+                type = AudioRouteType.EARPIECE
+            )
+
+            AudioDevice.Type.Speaker -> AudioRoute(
+                id = id,
+                name = "Viva-voz",
+                type = AudioRouteType.SPEAKER
+            )
+
+            AudioDevice.Type.Bluetooth,
+            AudioDevice.Type.HearingAid -> AudioRoute(
+                id = id,
+                name = deviceName.ifBlank { "Bluetooth" },
+                type = AudioRouteType.BLUETOOTH
+            )
+
+            AudioDevice.Type.Headset,
+            AudioDevice.Type.Headphones,
+            AudioDevice.Type.GenericUsb -> AudioRoute(
+                id = id,
+                name = deviceName.ifBlank { "Fone de ouvido" },
+                type = AudioRouteType.WIRED_HEADSET
+            )
+
+            AudioDevice.Type.Unknown,
+            AudioDevice.Type.Microphone,
+            AudioDevice.Type.BluetoothA2DP,
+            AudioDevice.Type.Telephony,
+            AudioDevice.Type.AuxLine,
+            AudioDevice.Type.Hdmi -> null
+        }
+    }
+
+    private fun AudioRouteType.sortOrder(): Int = when (this) {
+        AudioRouteType.BLUETOOTH -> 0
+        AudioRouteType.WIRED_HEADSET -> 1
+        AudioRouteType.EARPIECE -> 2
+        AudioRouteType.SPEAKER -> 3
     }
 
     private data class RawCallLogSnapshot(
@@ -427,5 +704,9 @@ internal class LinphoneSipClient(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private companion object {
+        const val DTMF_TONE_DURATION_MS = 120
     }
 }
