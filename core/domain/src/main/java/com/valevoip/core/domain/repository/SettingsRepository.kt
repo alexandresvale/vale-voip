@@ -9,4 +9,5 @@ interface SettingsRepository {
     suspend fun setEchoCancellation(enabled: Boolean)
     suspend fun setVibrate(enabled: Boolean)
     suspend fun setWifiOnly(enabled: Boolean)
+    suspend fun setSrtpEnabled(enabled: Boolean)
 }

@@ -52,14 +52,25 @@ internal class LoginViewModelTest {
     }
 
     @Test
-    fun `TCP e o transporte padrao da tela de login`() {
+    fun `TCP e a porta 5060 sao os valores padrao da tela de login`() {
         assertEquals(SipTransport.TCP, viewModel.uiState.value.transport)
+        assertEquals("5060", viewModel.uiState.value.port)
+    }
+
+    @Test
+    fun `Quando o evento OnPortChange for disparado, deve aceitar apenas digitos`() {
+        viewModel.onEvent(LoginUiEvent.OnPortChange("5061abc"))
+
+        assertEquals("5061", viewModel.uiState.value.port)
+        assertEquals(null, viewModel.uiState.value.portError)
     }
 
     @Test
     fun `Quando o evento OnTransportChange for disparado, o estado da UI deve ser atualizado`() {
-        viewModel.onEvent(LoginUiEvent.OnTransportChange(SipTransport.TLS))
+        viewModel.onEvent(LoginUiEvent.OnTransportChange(SipTransport.UDP))
+        assertEquals(SipTransport.UDP, viewModel.uiState.value.transport)
 
+        viewModel.onEvent(LoginUiEvent.OnTransportChange(SipTransport.TLS))
         assertEquals(SipTransport.TLS, viewModel.uiState.value.transport)
     }
 
@@ -69,6 +80,7 @@ internal class LoginViewModelTest {
         val messageError = "O domínio é obrigatório"
         coEvery {
             registerAccountUseCase.invoke(
+                any(),
                 any(),
                 any(),
                 any(),
@@ -87,7 +99,7 @@ internal class LoginViewModelTest {
         assertEquals(false, estadoAtual.isLoading)
         assertEquals(true, estadoAtual.isConnectionError)
         coVerify {
-            registerAccountUseCase.invoke(any(), any(), any(), SipTransport.TLS)
+            registerAccountUseCase.invoke(any(), any(), any(), "5060", SipTransport.TLS)
         }
     }
 }

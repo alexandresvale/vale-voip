@@ -40,11 +40,16 @@ internal class LoginViewModel @Inject constructor(
                 it.copy(domain = event.value, domainError = null)
             }
 
+            is LoginUiEvent.OnPortChange -> _uiState.update {
+                val sanitizedPort = event.value.filter { char -> char.isDigit() }.take(MAX_PORT_LENGTH)
+                it.copy(port = sanitizedPort, portError = null)
+            }
+
             is LoginUiEvent.OnTransportChange -> _uiState.update {
                 it.copy(transport = event.value)
             }
 
-            is LoginUiEvent.OnRegisterClick -> registerUser()
+            LoginUiEvent.OnRegisterClick -> registerUser()
         }
     }
 
@@ -57,6 +62,7 @@ internal class LoginViewModel @Inject constructor(
                 username = currentState.userName,
                 password = currentState.password,
                 domain = currentState.domain,
+                port = currentState.port,
                 transport = currentState.transport
             )) {
                 is RegisterResult.Success -> {
@@ -66,7 +72,7 @@ internal class LoginViewModel @Inject constructor(
 
                 is RegisterResult.Error -> {
                     when (val error = result.error) {
-                        is RegisterError.EmptyUsername -> _uiState.update {
+                        RegisterError.EmptyUsername -> _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 userNameError = "O Username é obrigatório",
@@ -74,7 +80,7 @@ internal class LoginViewModel @Inject constructor(
                             )
                         }
 
-                        is RegisterError.EmptyPassword -> _uiState.update {
+                        RegisterError.EmptyPassword -> _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 passwordError = "A senha é obrigatória",
@@ -82,10 +88,26 @@ internal class LoginViewModel @Inject constructor(
                             )
                         }
 
-                        is RegisterError.EmptyDomain -> _uiState.update {
+                        RegisterError.EmptyDomain -> _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 domainError = "O domínio é obrigatório",
+                                isConnectionError = true
+                            )
+                        }
+
+                        RegisterError.EmptyPort -> _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                portError = "A porta é obrigatória",
+                                isConnectionError = true
+                            )
+                        }
+
+                        RegisterError.InvalidPort -> _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                portError = "Porta inválida. Use um valor entre 1 e 65535",
                                 isConnectionError = true
                             )
                         }
@@ -98,7 +120,7 @@ internal class LoginViewModel @Inject constructor(
                             )
                         }
 
-                        is RegisterError.InvalidDomain -> _uiState.update {
+                        RegisterError.InvalidDomain -> _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 domainError = "Formato inválido. Use um IP ou URL (ex: sip.info)",
@@ -109,5 +131,9 @@ internal class LoginViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private companion object {
+        const val MAX_PORT_LENGTH = 5
     }
 }

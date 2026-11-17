@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Warning
@@ -69,7 +70,7 @@ internal fun ConfigLayout(
         // Card Superior - Ramal
         AccountInfoCard(
             username = state.username,
-            domain = state.domain,
+            domain = "${state.domain}:${state.port} • ${state.transport.name}",
             registrationState = state.registrationState
         )
 
@@ -107,6 +108,21 @@ internal fun ConfigLayout(
                     subtitle = "Vibrar o telefone nas chamadas recebidas",
                     checked = state.settings.vibrateOnIncomingCall,
                     onCheckedChange = { onAction(ConfigUiAction.SetVibrate(it)) }
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 68.dp),
+                    color = ValeVoipTheme.extendedColors.cardBorder
+                )
+
+                SettingsSwitchRow(
+                    icon = Icons.Default.Lock,
+                    iconBgColor = ValeVoipTheme.extendedColors.greenBg,
+                    iconTint = ValeVoipTheme.extendedColors.greenFg,
+                    title = "Criptografia de Mídia (SRTP)",
+                    subtitle = "Criptografa o áudio da chamada em servidores compatíveis",
+                    checked = state.settings.srtpEnabled,
+                    onCheckedChange = { onAction(ConfigUiAction.SetSrtpEnabled(it)) }
                 )
             }
         }

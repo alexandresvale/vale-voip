@@ -173,6 +173,7 @@ class VoipForegroundService : Service() {
                 username = account.username,
                 password = account.password,
                 domain = account.domain,
+                port = account.port.toString(),
                 transport = account.transport
             )
         }

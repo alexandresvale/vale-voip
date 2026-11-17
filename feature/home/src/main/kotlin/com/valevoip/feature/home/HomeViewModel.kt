@@ -57,7 +57,13 @@ internal class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val account = getAccountUseCase()
             if (account != null) {
-                registerAccountUseCase(account.username, account.password, account.domain, account.transport)
+                registerAccountUseCase(
+                    username = account.username,
+                    password = account.password,
+                    domain = account.domain,
+                    port = account.port.toString(),
+                    transport = account.transport
+                )
             }
         }
     }

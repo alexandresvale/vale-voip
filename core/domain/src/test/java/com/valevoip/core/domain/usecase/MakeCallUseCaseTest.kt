@@ -144,6 +144,7 @@ class MakeCallUseCaseTest {
         override suspend fun setEchoCancellation(enabled: Boolean) {}
         override suspend fun setVibrate(enabled: Boolean) {}
         override suspend fun setWifiOnly(enabled: Boolean) {}
+        override suspend fun setSrtpEnabled(enabled: Boolean) {}
     }
 
     private class FakeNetworkConnectivityProvider : NetworkConnectivityProvider {

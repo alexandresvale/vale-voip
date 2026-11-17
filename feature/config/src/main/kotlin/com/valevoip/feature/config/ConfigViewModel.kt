@@ -10,6 +10,7 @@ import com.valevoip.core.domain.usecase.IsIgnoringBatteryOptimizationsUseCase
 import com.valevoip.core.domain.usecase.ObserveRegistrationStateUseCase
 import com.valevoip.core.domain.usecase.ObserveVoipSettingsUseCase
 import com.valevoip.core.domain.usecase.SetEchoCancellationUseCase
+import com.valevoip.core.domain.usecase.SetSrtpEnabledUseCase
 import com.valevoip.core.domain.usecase.SetVibrateOnCallUseCase
 import com.valevoip.core.domain.usecase.SetWifiOnlyUseCase
 import com.valevoip.core.domain.usecase.UnregisterAccountUseCase
@@ -32,6 +33,7 @@ class ConfigViewModel @Inject constructor(
     private val setEchoCancellationUseCase: SetEchoCancellationUseCase,
     private val setVibrateOnCallUseCase: SetVibrateOnCallUseCase,
     private val setWifiOnlyUseCase: SetWifiOnlyUseCase,
+    private val setSrtpEnabledUseCase: SetSrtpEnabledUseCase,
     private val isIgnoringBatteryOptimizationsUseCase: IsIgnoringBatteryOptimizationsUseCase,
     private val getCallHistoryUseCase: GetCallHistoryUseCase,
     private val clearCallHistoryUseCase: ClearCallHistoryUseCase,
@@ -60,7 +62,9 @@ class ConfigViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         username = account.username,
-                        domain = account.domain
+                        domain = account.domain,
+                        port = account.port,
+                        transport = account.transport
                     )
                 }
             }
@@ -118,10 +122,15 @@ class ConfigViewModel @Inject constructor(
                     setWifiOnlyUseCase(action.enabled)
                 }
             }
-            is ConfigUiAction.RefreshBatteryOptimizationStatus -> {
+            is ConfigUiAction.SetSrtpEnabled -> {
+                viewModelScope.launch {
+                    setSrtpEnabledUseCase(action.enabled)
+                }
+            }
+            ConfigUiAction.RefreshBatteryOptimizationStatus -> {
                 refreshBatteryOptimizationStatus()
             }
-            is ConfigUiAction.RequestBatteryOptimizationSettings -> {
+            ConfigUiAction.RequestBatteryOptimizationSettings -> {
                 viewModelScope.launch {
                     _uiEffect.emit(
                         ConfigUiEffect.OpenBatteryOptimizationSettings(
@@ -130,13 +139,13 @@ class ConfigViewModel @Inject constructor(
                     )
                 }
             }
-            is ConfigUiAction.OpenClearHistoryDialog -> {
+            ConfigUiAction.OpenClearHistoryDialog -> {
                 _uiState.update { it.copy(showClearHistoryDialog = true) }
             }
-            is ConfigUiAction.DismissClearHistoryDialog -> {
+            ConfigUiAction.DismissClearHistoryDialog -> {
                 _uiState.update { it.copy(showClearHistoryDialog = false) }
             }
-            is ConfigUiAction.ConfirmClearHistory -> {
+            ConfigUiAction.ConfirmClearHistory -> {
                 _uiState.update { it.copy(showClearHistoryDialog = false) }
                 viewModelScope.launch {
                     clearCallHistoryUseCase().fold(
@@ -150,19 +159,19 @@ class ConfigViewModel @Inject constructor(
                     )
                 }
             }
-            is ConfigUiAction.ShareDiagnosticReport -> {
+            ConfigUiAction.ShareDiagnosticReport -> {
                 viewModelScope.launch {
                     val report = generateDiagnosticReportUseCase()
                     _uiEffect.emit(ConfigUiEffect.ShareText(report))
                 }
             }
-            is ConfigUiAction.OpenLogoutDialog -> {
+            ConfigUiAction.OpenLogoutDialog -> {
                 _uiState.update { it.copy(showLogoutDialog = true) }
             }
-            is ConfigUiAction.DismissLogoutDialog -> {
+            ConfigUiAction.DismissLogoutDialog -> {
                 _uiState.update { it.copy(showLogoutDialog = false) }
             }
-            is ConfigUiAction.ConfirmLogout -> {
+            ConfigUiAction.ConfirmLogout -> {
                 _uiState.update { it.copy(showLogoutDialog = false) }
                 viewModelScope.launch {
                     unregisterAccountUseCase()

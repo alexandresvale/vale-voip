@@ -65,26 +65,60 @@ class RegisterAccountUseCaseTest {
     }
 
     @Test
+    fun `should return EmptyPort error when port is blank`() = runTest {
+        val result = registerAccountUseCase("1001", "pass", "sip.valevoip.com.br", port = "")
+
+        assertTrue(result is RegisterResult.Error)
+        assertEquals(RegisterError.EmptyPort, (result as RegisterResult.Error).error)
+    }
+
+    @Test
+    fun `should return InvalidPort error when port is out of valid range`() = runTest {
+        val resultZero = registerAccountUseCase("1001", "pass", "sip.valevoip.com.br", port = "0")
+        val resultHigh = registerAccountUseCase("1001", "pass", "sip.valevoip.com.br", port = "70000")
+
+        assertTrue(resultZero is RegisterResult.Error)
+        assertEquals(RegisterError.InvalidPort, (resultZero as RegisterResult.Error).error)
+        assertTrue(resultHigh is RegisterResult.Error)
+        assertEquals(RegisterError.InvalidPort, (resultHigh as RegisterResult.Error).error)
+    }
+
+    @Test
     fun `should succeed and save account when domain is valid FQDN and SIP registers successfully`() = runTest {
         fakeSipClient.registrationEmission = flowOf(SipRegistrationState.Progress, SipRegistrationState.Ok)
 
-        val result = registerAccountUseCase("1001", "pass123", "pbx.valevoip.com.br", SipTransport.TLS)
+        val result = registerAccountUseCase(
+            username = "1001",
+            password = "pass123",
+            domain = "pbx.valevoip.com.br",
+            port = "5061",
+            transport = SipTransport.TLS
+        )
 
         assertTrue(result is RegisterResult.Success)
         assertEquals("1001", fakeAccountRepository.account?.username)
         assertEquals("pass123", fakeAccountRepository.account?.password)
         assertEquals("pbx.valevoip.com.br", fakeAccountRepository.account?.domain)
+        assertEquals(5061, fakeAccountRepository.account?.port)
         assertEquals(SipTransport.TLS, fakeAccountRepository.account?.transport)
     }
 
     @Test
-    fun `should succeed when host is a valid IPv4 address`() = runTest {
+    fun `should succeed when host is a valid IPv4 address with UDP and custom port`() = runTest {
         fakeSipClient.registrationEmission = flowOf(SipRegistrationState.Ok)
 
-        val result = registerAccountUseCase("1001", "pass123", "192.168.1.100")
+        val result = registerAccountUseCase(
+            username = "1001",
+            password = "pass123",
+            domain = "192.168.1.100",
+            port = "5080",
+            transport = SipTransport.UDP
+        )
 
         assertTrue(result is RegisterResult.Success)
         assertEquals("192.168.1.100", fakeAccountRepository.account?.domain)
+        assertEquals(5080, fakeAccountRepository.account?.port)
+        assertEquals(SipTransport.UDP, fakeAccountRepository.account?.transport)
     }
 
     @Test

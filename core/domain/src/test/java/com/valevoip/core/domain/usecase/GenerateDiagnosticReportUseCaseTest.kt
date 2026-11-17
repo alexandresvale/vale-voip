@@ -89,11 +89,13 @@ class GenerateDiagnosticReportUseCaseTest {
         // Verifica conta (garantindo que a senha NÃO vaze)
         assertTrue(report.contains("Ramal: 2001"))
         assertTrue(report.contains("Domínio: pbx.empresa.com"))
+        assertTrue(report.contains("Porta: 5060"))
         assertTrue(report.contains("Transporte: TLS"))
         assertFalse(report.contains("secret_password"))
 
         // Verifica motor VoIP
         assertTrue(report.contains("Versão Liblinphone: 5.5.13"))
+        assertTrue(report.contains("Criptografia de Mídia (SRTP): Desativado"))
         assertTrue(report.contains("Cancelamento de Eco (AEC): Ativado"))
         assertTrue(report.contains("Vibrar ao Chamar: Ativado"))
     }
@@ -142,6 +144,7 @@ class GenerateDiagnosticReportUseCaseTest {
         override suspend fun setEchoCancellation(enabled: Boolean) { currentSettings = currentSettings.copy(echoCancellationEnabled = enabled) }
         override suspend fun setVibrate(enabled: Boolean) { currentSettings = currentSettings.copy(vibrateOnIncomingCall = enabled) }
         override suspend fun setWifiOnly(enabled: Boolean) { currentSettings = currentSettings.copy(useWifiOnly = enabled) }
+        override suspend fun setSrtpEnabled(enabled: Boolean) { currentSettings = currentSettings.copy(srtpEnabled = enabled) }
     }
 
     private class FakeDeviceInfoProvider : DeviceInfoProvider {

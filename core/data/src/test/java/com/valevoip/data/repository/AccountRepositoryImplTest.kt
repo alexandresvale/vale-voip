@@ -56,7 +56,8 @@ internal class AccountRepositoryImplTest {
             username = "test-user",
             password = "test-password",
             domain = "sip.example.test",
-            transport = SipTransport.TLS
+            port = 5080,
+            transport = SipTransport.UDP
         )
 
         repository.insertAccount(account)
@@ -66,6 +67,7 @@ internal class AccountRepositoryImplTest {
                 username = account.username,
                 password = account.password,
                 domain = account.domain,
+                port = account.port,
                 transport = account.transport.name
             ),
             writtenPrefs

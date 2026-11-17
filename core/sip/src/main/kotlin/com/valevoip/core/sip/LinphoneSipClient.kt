@@ -34,6 +34,7 @@ import org.linphone.core.Core
 import org.linphone.core.CoreListenerStub
 import org.linphone.core.Factory
 import org.linphone.core.LogLevel
+import org.linphone.core.MediaEncryption
 import org.linphone.core.RegistrationState
 import timber.log.Timber
 
@@ -212,6 +213,20 @@ internal class LinphoneSipClient(
                 }
             }
             .launchIn(coroutineScope)
+
+        // Sincroniza criptografia de mídia (SRTP) sob demanda
+        settingsRepository.settings
+            .map { it.srtpEnabled }
+            .distinctUntilChanged()
+            .onEach { enabled ->
+                linphoneCore?.let { core ->
+                    val encryption = if (enabled) MediaEncryption.SRTP else MediaEncryption.None
+                    Timber.d("Sincronizando criptografia de mídia (SRTP) com Core: mediaEncryption = $encryption")
+                    core.mediaEncryption = encryption
+                    core.isMediaEncryptionMandatory = false
+                }
+            }
+            .launchIn(coroutineScope)
     }
 
     override suspend fun register(account: SipAccount): Flow<SipRegistrationState> =
@@ -240,9 +255,12 @@ internal class LinphoneSipClient(
             core.verifyServerCertificates(transportConfiguration.verifyServerCertificates)
             core.verifyServerCn(transportConfiguration.verifyServerCommonName)
 
-            // Preserve TCP for legacy servers; TLS is used only when explicitly selected.
+            // Configura o servidor SIP com o transporte selecionado (UDP, TCP ou TLS) e porta customizada quando aplicável.
             val serverAddress = Factory.instance().createAddress("sip:${account.domain}")
             serverAddress?.transport = transportConfiguration.linphoneTransport
+            if (shouldApplyExplicitPort(account)) {
+                serverAddress?.port = account.port
+            }
             accountParams.serverAddress = serverAddress
             accountParams.isOutboundProxyEnabled = true
             accountParams.natPolicy = core.natPolicy
@@ -272,8 +290,15 @@ internal class LinphoneSipClient(
         val identity = currentAccount.params.identityAddress
         val server = currentAccount.params.serverAddress
 
+        val isSamePort = if (shouldApplyExplicitPort(account)) {
+            server?.port == account.port
+        } else {
+            server?.port == -1 || server?.port == 0 || server?.port == account.port
+        }
+
         val isSameAccount = identity?.username == account.username &&
             identity.domain == account.domain &&
+            isSamePort &&
             server?.transport == transportConfiguration.linphoneTransport
 
         val isHealthyOrConnecting = when (_registrationState.value) {
@@ -706,7 +731,13 @@ internal class LinphoneSipClient(
         }
     }
 
+    private fun shouldApplyExplicitPort(account: SipAccount): Boolean {
+        return account.port != SipAccount.DEFAULT_SIP_PORT || IPV4_REGEX.matches(account.domain)
+    }
+
     private companion object {
         const val DTMF_TONE_DURATION_MS = 120
+        val IPV4_REGEX =
+            "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$".toRegex()
     }
 }
