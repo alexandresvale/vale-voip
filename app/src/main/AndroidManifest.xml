@@ -38,7 +38,7 @@
         android:roundIcon="@mipmap/ic_launcher_vale_voip_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ValeVoIP"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="false"
         tools:targetApi="31">
 
         <activity

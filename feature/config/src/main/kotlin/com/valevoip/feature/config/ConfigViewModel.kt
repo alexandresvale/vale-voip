@@ -2,6 +2,8 @@ package com.valevoip.feature.config
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.valevoip.core.analytics.AnalyticsEvent
+import com.valevoip.core.analytics.AnalyticsTracker
 import com.valevoip.core.domain.usecase.ClearCallHistoryUseCase
 import com.valevoip.core.domain.usecase.GenerateDiagnosticReportUseCase
 import com.valevoip.core.domain.usecase.GetAccountUseCase
@@ -38,7 +40,8 @@ class ConfigViewModel @Inject constructor(
     private val getCallHistoryUseCase: GetCallHistoryUseCase,
     private val clearCallHistoryUseCase: ClearCallHistoryUseCase,
     private val generateDiagnosticReportUseCase: GenerateDiagnosticReportUseCase,
-    private val unregisterAccountUseCase: UnregisterAccountUseCase
+    private val unregisterAccountUseCase: UnregisterAccountUseCase,
+    private val analyticsTracker: AnalyticsTracker
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ConfigUiState())
@@ -110,21 +113,25 @@ class ConfigViewModel @Inject constructor(
             is ConfigUiAction.SetEchoCancellation -> {
                 viewModelScope.launch {
                     setEchoCancellationUseCase(action.enabled)
+                    logSettingChanged("echo_cancellation", action.enabled)
                 }
             }
             is ConfigUiAction.SetVibrate -> {
                 viewModelScope.launch {
                     setVibrateOnCallUseCase(action.enabled)
+                    logSettingChanged("vibrate_on_call", action.enabled)
                 }
             }
             is ConfigUiAction.SetWifiOnly -> {
                 viewModelScope.launch {
                     setWifiOnlyUseCase(action.enabled)
+                    logSettingChanged("wifi_only", action.enabled)
                 }
             }
             is ConfigUiAction.SetSrtpEnabled -> {
                 viewModelScope.launch {
                     setSrtpEnabledUseCase(action.enabled)
+                    logSettingChanged("srtp_enabled", action.enabled)
                 }
             }
             ConfigUiAction.RefreshBatteryOptimizationStatus -> {
@@ -179,5 +186,17 @@ class ConfigViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun logSettingChanged(settingName: String, enabled: Boolean) {
+        analyticsTracker.logEvent(
+            AnalyticsEvent(
+                eventName = "voip_setting_changed",
+                parameters = mapOf(
+                    "setting" to settingName,
+                    "enabled" to enabled
+                )
+            )
+        )
     }
 }

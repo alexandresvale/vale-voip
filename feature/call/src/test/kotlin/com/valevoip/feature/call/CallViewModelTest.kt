@@ -1,6 +1,7 @@
 package com.valevoip.feature.call
 
 import androidx.lifecycle.SavedStateHandle
+import com.valevoip.core.analytics.AnalyticsTracker
 import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
@@ -56,6 +57,7 @@ internal class CallViewModelTest {
     private val selectAudioRouteUseCase: SelectAudioRouteUseCase = mockk()
     private val sendDtmfUseCase: SendDtmfUseCase = mockk()
     private val toggleHoldUseCase: ToggleHoldUseCase = mockk()
+    private val analyticsTracker: AnalyticsTracker = mockk(relaxed = true)
 
     private lateinit var callStatusFlow: MutableStateFlow<CallStatus>
     private lateinit var muteStateFlow: MutableStateFlow<Boolean>
@@ -301,7 +303,8 @@ internal class CallViewModelTest {
             observeActiveAudioRouteUseCase = observeActiveAudioRouteUseCase,
             selectAudioRouteUseCase = selectAudioRouteUseCase,
             sendDtmfUseCase = sendDtmfUseCase,
-            toggleHoldUseCase = toggleHoldUseCase
+            toggleHoldUseCase = toggleHoldUseCase,
+            analyticsTracker = analyticsTracker
         )
     }
 }

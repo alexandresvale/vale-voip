@@ -34,12 +34,46 @@ android {
 
     }
 
+    val keystorePath = providers.gradleProperty("VALEVOIP_KEYSTORE_FILE")
+        .orElse(providers.environmentVariable("VALEVOIP_KEYSTORE_FILE"))
+        .orNull
+    val keystorePassword = providers.gradleProperty("VALEVOIP_KEYSTORE_PASSWORD")
+        .orElse(providers.environmentVariable("VALEVOIP_KEYSTORE_PASSWORD"))
+        .orNull
+    val keyAliasName = providers.gradleProperty("VALEVOIP_KEY_ALIAS")
+        .orElse(providers.environmentVariable("VALEVOIP_KEY_ALIAS"))
+        .orNull
+    val keyAliasPassword = providers.gradleProperty("VALEVOIP_KEY_PASSWORD")
+        .orElse(providers.environmentVariable("VALEVOIP_KEY_PASSWORD"))
+        .orNull
+
+    val hasReleaseSigning = !keystorePath.isNullOrBlank() &&
+        !keystorePassword.isNullOrBlank() &&
+        !keyAliasName.isNullOrBlank() &&
+        !keyAliasPassword.isNullOrBlank() &&
+        file(keystorePath).exists()
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(requireNotNull(keystorePath))
+                storePassword = keystorePassword
+                keyAlias = keyAliasName
+                keyPassword = keyAliasPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         debug {
             applicationIdSuffix = ".debug"

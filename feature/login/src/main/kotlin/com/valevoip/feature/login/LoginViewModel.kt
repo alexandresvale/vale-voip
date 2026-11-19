@@ -2,6 +2,8 @@ package com.valevoip.feature.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.valevoip.core.analytics.AnalyticsEvent
+import com.valevoip.core.analytics.AnalyticsTracker
 import com.valevoip.core.domain.usecase.RegisterAccountUseCase
 import com.valevoip.core.domain.usecase.RegisterError
 import com.valevoip.core.domain.usecase.RegisterResult
@@ -17,7 +19,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 internal class LoginViewModel @Inject constructor(
-    private val registerUserUseCase: RegisterAccountUseCase
+    private val registerUserUseCase: RegisterAccountUseCase,
+    private val analyticsTracker: AnalyticsTracker
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -66,12 +69,28 @@ internal class LoginViewModel @Inject constructor(
                 transport = currentState.transport
             )) {
                 is RegisterResult.Success -> {
+                    analyticsTracker.logEvent(
+                        AnalyticsEvent(
+                            eventName = "sip_register_success",
+                            parameters = mapOf("transport" to currentState.transport.name)
+                        )
+                    )
                     _uiState.update { it.copy(isLoading = false, userNameError = "", isConnectionError = false) }
                     _effect.send(LoginEffect.NavigateToDialer)
                 }
 
                 is RegisterResult.Error -> {
-                    when (val error = result.error) {
+                    val error = result.error
+                    analyticsTracker.logEvent(
+                        AnalyticsEvent(
+                            eventName = "sip_register_failure",
+                            parameters = mapOf(
+                                "transport" to currentState.transport.name,
+                                "error_type" to error::class.simpleName.orEmpty()
+                            )
+                        )
+                    )
+                    when (error) {
                         RegisterError.EmptyUsername -> _uiState.update {
                             it.copy(
                                 isLoading = false,

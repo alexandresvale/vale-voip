@@ -1,6 +1,7 @@
 package com.valevoip.core.sip
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import com.valevoip.core.domain.client.SipClient
 import com.valevoip.core.domain.di.IoDispatcher
 import com.valevoip.core.domain.di.MainDispatcher
@@ -66,10 +67,11 @@ internal class LinphoneSipClient(
     private var linphoneCore: Core? = null
 
     init {
+        val isDebuggable = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         val factory = Factory.instance()
         factory.loggingService.domain = "ValeVoIP-Linphone"
-        factory.loggingService.setLogLevel(LogLevel.Message)
-        factory.enableLogcatLogs(true)
+        factory.loggingService.setLogLevel(if (isDebuggable) LogLevel.Message else LogLevel.Fatal)
+        factory.enableLogcatLogs(isDebuggable)
 
         linphoneCore = factory.createCore(null, null, context)
 

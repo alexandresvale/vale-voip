@@ -1,5 +1,6 @@
 package com.valevoip.feature.login
 
+import com.valevoip.core.analytics.AnalyticsTracker
 import com.valevoip.core.domain.usecase.RegisterAccountUseCase
 import com.valevoip.core.domain.usecase.RegisterError
 import com.valevoip.core.domain.usecase.RegisterResult
@@ -7,6 +8,7 @@ import com.valevoip.core.domain.model.SipTransport
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.verify
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,13 +25,14 @@ internal class LoginViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private val registerAccountUseCase: RegisterAccountUseCase = mockk()
+    private val analyticsTracker: AnalyticsTracker = mockk(relaxed = true)
     private lateinit var viewModel: LoginViewModel
 
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = LoginViewModel(registerAccountUseCase)
+        viewModel = LoginViewModel(registerAccountUseCase, analyticsTracker)
     }
 
     @After
@@ -100,6 +103,9 @@ internal class LoginViewModelTest {
         assertEquals(true, estadoAtual.isConnectionError)
         coVerify {
             registerAccountUseCase.invoke(any(), any(), any(), "5060", SipTransport.TLS)
+        }
+        verify {
+            analyticsTracker.logEvent(match { it.eventName == "sip_register_failure" })
         }
     }
 }

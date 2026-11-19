@@ -16,6 +16,7 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 add("implementation", project(mapOf("path" to ":core:domain")))
                 add("implementation", project(mapOf("path" to ":core:designsystem")))
                 add("implementation", project(mapOf("path" to ":core:navigation")))
+                add("implementation", project(mapOf("path" to ":core:analytics")))
                 add("implementation", libs.findLibrary("androidx-lifecycle-viewmodel-ktx").get())
                 add("implementation", libs.findLibrary("hilt-navigation-compose").get())
                 add("implementation", libs.findLibrary("navigation-compose").get())

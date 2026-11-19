@@ -3,6 +3,8 @@ package com.valevoip.feature.call
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.valevoip.core.analytics.AnalyticsEvent
+import com.valevoip.core.analytics.AnalyticsTracker
 import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.usecase.AnswerCallUseCase
@@ -48,7 +50,8 @@ internal class CallViewModel @Inject constructor(
     private val observeActiveAudioRouteUseCase: ObserveActiveAudioRouteUseCase,
     private val selectAudioRouteUseCase: SelectAudioRouteUseCase,
     private val sendDtmfUseCase: SendDtmfUseCase,
-    private val toggleHoldUseCase: ToggleHoldUseCase
+    private val toggleHoldUseCase: ToggleHoldUseCase,
+    private val analyticsTracker: AnalyticsTracker
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -127,6 +130,12 @@ internal class CallViewModel @Inject constructor(
         makeCallUseCase(number)
             .onSuccess {
                 logEvent("Chamada enviada com sucesso para o core.")
+                analyticsTracker.logEvent(
+                    AnalyticsEvent(
+                        eventName = "voip_call_started",
+                        parameters = mapOf("direction" to "outgoing")
+                    )
+                )
             }
             .onFailure { error ->
                 logEvent("Erro ao chamar: ${error.message}")
@@ -153,6 +162,12 @@ internal class CallViewModel @Inject constructor(
         answerCallUseCase()
             .onSuccess {
                 logEvent("Comando de atender enviado.")
+                analyticsTracker.logEvent(
+                    AnalyticsEvent(
+                        eventName = "voip_call_answered",
+                        parameters = mapOf("direction" to "incoming")
+                    )
+                )
             }
             .onFailure { e ->
                 logEvent("Falha ao atender: ${e.message}")
@@ -328,6 +343,12 @@ internal class CallViewModel @Inject constructor(
 
                         CallStatus.ENDED -> {
                             stopTimer()
+                            analyticsTracker.logEvent(
+                                AnalyticsEvent(
+                                    eventName = "voip_call_ended",
+                                    parameters = mapOf("duration_seconds" to _uiState.value.duration)
+                                )
+                            )
                             _uiState.update {
                                 it.copy(
                                     isKeypadVisible = false,
