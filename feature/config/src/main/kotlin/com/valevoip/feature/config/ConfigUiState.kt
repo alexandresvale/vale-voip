@@ -1,5 +1,6 @@
 package com.valevoip.feature.config
 
+import com.valevoip.core.domain.model.AudioCodec
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
 import com.valevoip.core.domain.model.SipTransport
@@ -12,6 +13,8 @@ data class ConfigUiState(
     val transport: SipTransport = SipTransport.TCP,
     val registrationState: SipRegistrationState = SipRegistrationState.None,
     val settings: VoipSettings = VoipSettings(),
+    val audioCodecs: List<AudioCodec> = emptyList(),
+    val showAudioCodecsSheet: Boolean = false,
     val isIgnoringBatteryOptimizations: Boolean = true,
     val callHistoryCount: Int = 0,
     val showClearHistoryDialog: Boolean = false,

@@ -38,6 +38,10 @@ class GenerateDiagnosticReportUseCase @Inject constructor(
             isWifi -> "Wi-Fi"
             else -> "Dados Móveis (Celular)"
         }
+        val enabledCodecsSummary = sipClient.availableAudioCodecs.value
+            .filter { it.isEnabled }
+            .joinToString(", ") { "${it.mimeType} (${it.formattedClockRate})" }
+            .ifBlank { "Padrão do Motor" }
         val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
 
         return buildString {
@@ -66,6 +70,7 @@ class GenerateDiagnosticReportUseCase @Inject constructor(
             appendLine("--- MOTOR VOIP (LINPHONE) ---")
             appendLine("Versão Liblinphone: ${sipClient.getLinphoneVersion()}")
             appendLine("Estado da Chamada: ${sipClient.getSynchronousCallStatus()}")
+            appendLine("Codecs de Áudio Habilitados: $enabledCodecsSummary")
             appendLine("Criptografia de Mídia (SRTP): ${if (settings.srtpEnabled) "Ativado" else "Desativado"}")
             appendLine("Cancelamento de Eco (AEC): ${if (settings.echoCancellationEnabled) "Ativado" else "Desativado"}")
             appendLine("Vibrar ao Chamar: ${if (settings.vibrateOnIncomingCall) "Ativado" else "Desativado"}")

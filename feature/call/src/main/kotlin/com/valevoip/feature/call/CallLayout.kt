@@ -13,12 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BluetoothAudio
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Dialpad
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -93,6 +95,14 @@ internal fun CallLayout(
                 }
             )
 
+            val showCodecBadge = !state.activeCodecLabel.isNullOrBlank() &&
+                (state.callStatus == CallStatus.ACTIVE || state.callStatus == CallStatus.PAUSED)
+
+            if (showCodecBadge) {
+                Spacer(modifier = Modifier.height(8.dp))
+                ActiveCodecBadge(codecLabel = state.activeCodecLabel.orEmpty())
+            }
+
             Spacer(modifier = Modifier.weight(0.1f))
 
             // Avatar
@@ -163,6 +173,30 @@ internal fun CallLayout(
             activeRouteId = state.activeAudioRoute?.id,
             onSelectRoute = { routeId -> onEvent(CallUiEvent.OnSelectAudioRoute(routeId)) },
             onDismiss = { onEvent(CallUiEvent.OnDismissAudioRouteSheet) }
+        )
+    }
+}
+
+@Composable
+private fun ActiveCodecBadge(codecLabel: String) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.GraphicEq,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = codecLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

@@ -1,6 +1,7 @@
 package com.valevoip.core.domain.usecase
 
 import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.model.AudioCodec
 import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
@@ -145,6 +146,8 @@ class RegisterAccountUseCaseTest {
         override val isSpeakerEnabled: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
         override val availableAudioRoutes: StateFlow<List<AudioRoute>> = MutableStateFlow(emptyList())
         override val activeAudioRoute: StateFlow<AudioRoute?> = MutableStateFlow(null)
+        override val availableAudioCodecs: StateFlow<List<AudioCodec>> = MutableStateFlow(emptyList())
+        override val activeCallCodec: StateFlow<AudioCodec?> = MutableStateFlow(null)
 
         override suspend fun register(account: SipAccount): Flow<SipRegistrationState> = registrationEmission
         override suspend fun unregister(): Flow<SipRegistrationState> = emptyFlow()
@@ -153,6 +156,7 @@ class RegisterAccountUseCaseTest {
         override fun toggleMute(): Result<Unit> = Result.success(Unit)
         override fun toggleSpeaker(): Result<Boolean> = Result.success(true)
         override fun selectAudioRoute(routeId: String): Result<Unit> = Result.success(Unit)
+        override fun setAudioCodecEnabled(codecId: String, enabled: Boolean): Result<Unit> = Result.success(Unit)
         override fun sendDtmf(digit: Char): Result<Unit> = Result.success(Unit)
         override fun toggleHold(): Result<Boolean> = Result.success(true)
         override fun muteCall(callId: String): Result<Unit> = Result.success(Unit)

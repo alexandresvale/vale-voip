@@ -2,6 +2,7 @@ package com.valevoip.core.domain.usecase
 
 import com.valevoip.core.domain.client.BatteryOptimizationProvider
 import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.model.AudioCodec
 import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
@@ -41,6 +42,9 @@ class TelephonyUseCasesTest {
     private lateinit var observeSpeakerStateUseCase: ObserveSpeakerStateUseCase
     private lateinit var observeAudioRoutesUseCase: ObserveAudioRoutesUseCase
     private lateinit var observeActiveAudioRouteUseCase: ObserveActiveAudioRouteUseCase
+    private lateinit var observeAudioCodecsUseCase: ObserveAudioCodecsUseCase
+    private lateinit var observeActiveCallCodecUseCase: ObserveActiveCallCodecUseCase
+    private lateinit var setAudioCodecEnabledUseCase: SetAudioCodecEnabledUseCase
     private lateinit var selectAudioRouteUseCase: SelectAudioRouteUseCase
     private lateinit var sendDtmfUseCase: SendDtmfUseCase
     private lateinit var toggleHoldUseCase: ToggleHoldUseCase
@@ -68,6 +72,9 @@ class TelephonyUseCasesTest {
         observeSpeakerStateUseCase = ObserveSpeakerStateUseCase(fakeSipClient)
         observeAudioRoutesUseCase = ObserveAudioRoutesUseCase(fakeSipClient)
         observeActiveAudioRouteUseCase = ObserveActiveAudioRouteUseCase(fakeSipClient)
+        observeAudioCodecsUseCase = ObserveAudioCodecsUseCase(fakeSipClient)
+        observeActiveCallCodecUseCase = ObserveActiveCallCodecUseCase(fakeSipClient)
+        setAudioCodecEnabledUseCase = SetAudioCodecEnabledUseCase(fakeSipClient)
         selectAudioRouteUseCase = SelectAudioRouteUseCase(fakeSipClient)
         sendDtmfUseCase = SendDtmfUseCase(fakeSipClient)
         toggleHoldUseCase = ToggleHoldUseCase(fakeSipClient)
@@ -226,6 +233,27 @@ class TelephonyUseCasesTest {
     }
 
     @Test
+    fun `observeAudioCodecs and setAudioCodecEnabled update codec state and prevent disabling last active codec`() = runTest {
+        val opus = AudioCodec("OPUS/48000/2", "OPUS", 48000, 2, "Opus", isEnabled = true)
+        val pcmu = AudioCodec("PCMU/8000/1", "PCMU", 8000, 1, "G.711", isEnabled = true)
+        fakeSipClient.availableAudioCodecsFlow.value = listOf(opus, pcmu)
+        fakeSipClient.activeCallCodecFlow.value = opus
+
+        assertEquals(listOf(opus, pcmu), observeAudioCodecsUseCase().first())
+        assertEquals(opus, observeActiveCallCodecUseCase().first())
+
+        // Desativar OPUS com PCMU ainda ativo deve funcionar
+        val disableFirstResult = setAudioCodecEnabledUseCase("OPUS/48000/2", enabled = false)
+        assertTrue(disableFirstResult.isSuccess)
+
+        // Tentar desativar o último codec ativo (PCMU) deve ser bloqueado pela regra de domínio
+        fakeSipClient.availableAudioCodecsFlow.value = listOf(opus.copy(isEnabled = false), pcmu)
+        val disableLastResult = setAudioCodecEnabledUseCase("PCMU/8000/1", enabled = false)
+        assertTrue(disableLastResult.isFailure)
+        assertTrue(disableLastResult.exceptionOrNull() is IllegalStateException)
+    }
+
+    @Test
     fun `observeRegistrationState emits state flow from sipClient`() = runTest {
         fakeSipClient.registrationStateFlow.value = SipRegistrationState.Ok
         assertEquals(SipRegistrationState.Ok, observeRegistrationStateUseCase().first())
@@ -247,6 +275,8 @@ class TelephonyUseCasesTest {
         val isSpeakerEnabledFlow = MutableStateFlow(false)
         val availableAudioRoutesFlow = MutableStateFlow<List<AudioRoute>>(emptyList())
         val activeAudioRouteFlow = MutableStateFlow<AudioRoute?>(null)
+        val availableAudioCodecsFlow = MutableStateFlow<List<AudioCodec>>(emptyList())
+        val activeCallCodecFlow = MutableStateFlow<AudioCodec?>(null)
         var unregisterEmission: Flow<SipRegistrationState> = emptyFlow()
         var unregisterShouldThrow = false
 
@@ -255,6 +285,8 @@ class TelephonyUseCasesTest {
         override val isSpeakerEnabled: StateFlow<Boolean> = isSpeakerEnabledFlow
         override val availableAudioRoutes: StateFlow<List<AudioRoute>> = availableAudioRoutesFlow
         override val activeAudioRoute: StateFlow<AudioRoute?> = activeAudioRouteFlow
+        override val availableAudioCodecs: StateFlow<List<AudioCodec>> = availableAudioCodecsFlow
+        override val activeCallCodec: StateFlow<AudioCodec?> = activeCallCodecFlow
         override suspend fun register(account: SipAccount): Flow<SipRegistrationState> = emptyFlow()
         override suspend fun unregister(): Flow<SipRegistrationState> {
             if (unregisterShouldThrow) throw IllegalStateException("Network Error")
@@ -268,6 +300,7 @@ class TelephonyUseCasesTest {
             lastSelectedRouteId = routeId
             return Result.success(Unit)
         }
+        override fun setAudioCodecEnabled(codecId: String, enabled: Boolean): Result<Unit> = Result.success(Unit)
         override fun sendDtmf(digit: Char): Result<Unit> {
             lastDtmfDigit = digit
             return Result.success(Unit)

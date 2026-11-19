@@ -2,6 +2,7 @@ package com.valevoip.feature.call
 
 import androidx.lifecycle.SavedStateHandle
 import com.valevoip.core.analytics.AnalyticsTracker
+import com.valevoip.core.domain.model.AudioCodec
 import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
@@ -11,6 +12,7 @@ import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
 import com.valevoip.core.domain.usecase.MakeCallUseCase
 import com.valevoip.core.domain.usecase.ObserveActiveAudioRouteUseCase
+import com.valevoip.core.domain.usecase.ObserveActiveCallCodecUseCase
 import com.valevoip.core.domain.usecase.ObserveAudioRoutesUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
 import com.valevoip.core.domain.usecase.ObserveMuteStateUseCase
@@ -54,6 +56,7 @@ internal class CallViewModelTest {
     private val observeSpeakerStateUseCase: ObserveSpeakerStateUseCase = mockk()
     private val observeAudioRoutesUseCase: ObserveAudioRoutesUseCase = mockk()
     private val observeActiveAudioRouteUseCase: ObserveActiveAudioRouteUseCase = mockk()
+    private val observeActiveCallCodecUseCase: ObserveActiveCallCodecUseCase = mockk()
     private val selectAudioRouteUseCase: SelectAudioRouteUseCase = mockk()
     private val sendDtmfUseCase: SendDtmfUseCase = mockk()
     private val toggleHoldUseCase: ToggleHoldUseCase = mockk()
@@ -64,6 +67,7 @@ internal class CallViewModelTest {
     private lateinit var speakerStateFlow: MutableStateFlow<Boolean>
     private lateinit var audioRoutesFlow: MutableStateFlow<List<AudioRoute>>
     private lateinit var activeAudioRouteFlow: MutableStateFlow<AudioRoute?>
+    private lateinit var activeCallCodecFlow: MutableStateFlow<AudioCodec?>
 
     @Before
     fun setUp() {
@@ -73,12 +77,14 @@ internal class CallViewModelTest {
         speakerStateFlow = MutableStateFlow(false)
         audioRoutesFlow = MutableStateFlow(emptyList())
         activeAudioRouteFlow = MutableStateFlow(null)
+        activeCallCodecFlow = MutableStateFlow(null)
 
         every { observeCallStateUseCase() } returns callStatusFlow
         every { observeMuteStateUseCase() } returns muteStateFlow
         every { observeSpeakerStateUseCase() } returns speakerStateFlow
         every { observeAudioRoutesUseCase() } returns audioRoutesFlow
         every { observeActiveAudioRouteUseCase() } returns activeAudioRouteFlow
+        every { observeActiveCallCodecUseCase() } returns activeCallCodecFlow
         every { getCallStatusSyncUseCase() } returns CallStatus.IDLE
         every { getCurrentCallNumberUseCase() } returns "Desconhecido"
     }
@@ -301,6 +307,7 @@ internal class CallViewModelTest {
             observeSpeakerStateUseCase = observeSpeakerStateUseCase,
             observeAudioRoutesUseCase = observeAudioRoutesUseCase,
             observeActiveAudioRouteUseCase = observeActiveAudioRouteUseCase,
+            observeActiveCallCodecUseCase = observeActiveCallCodecUseCase,
             selectAudioRouteUseCase = selectAudioRouteUseCase,
             sendDtmfUseCase = sendDtmfUseCase,
             toggleHoldUseCase = toggleHoldUseCase,

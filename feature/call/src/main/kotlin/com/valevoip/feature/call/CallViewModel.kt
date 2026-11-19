@@ -13,6 +13,7 @@ import com.valevoip.core.domain.usecase.GetCurrentCallNumberUseCase
 import com.valevoip.core.domain.usecase.HangUpUseCase
 import com.valevoip.core.domain.usecase.MakeCallUseCase
 import com.valevoip.core.domain.usecase.ObserveActiveAudioRouteUseCase
+import com.valevoip.core.domain.usecase.ObserveActiveCallCodecUseCase
 import com.valevoip.core.domain.usecase.ObserveAudioRoutesUseCase
 import com.valevoip.core.domain.usecase.ObserveCallStateUseCase
 import com.valevoip.core.domain.usecase.ObserveMuteStateUseCase
@@ -48,6 +49,7 @@ internal class CallViewModel @Inject constructor(
     private val observeSpeakerStateUseCase: ObserveSpeakerStateUseCase,
     private val observeAudioRoutesUseCase: ObserveAudioRoutesUseCase,
     private val observeActiveAudioRouteUseCase: ObserveActiveAudioRouteUseCase,
+    private val observeActiveCallCodecUseCase: ObserveActiveCallCodecUseCase,
     private val selectAudioRouteUseCase: SelectAudioRouteUseCase,
     private val sendDtmfUseCase: SendDtmfUseCase,
     private val toggleHoldUseCase: ToggleHoldUseCase,
@@ -266,6 +268,11 @@ internal class CallViewModel @Inject constructor(
         viewModelScope.launch {
             observeActiveAudioRouteUseCase().collect { activeRoute ->
                 _uiState.update { it.copy(activeAudioRoute = activeRoute) }
+            }
+        }
+        viewModelScope.launch {
+            observeActiveCallCodecUseCase().collect { activeCodec ->
+                _uiState.update { it.copy(activeCodecLabel = activeCodec?.displayLabel) }
             }
         }
     }

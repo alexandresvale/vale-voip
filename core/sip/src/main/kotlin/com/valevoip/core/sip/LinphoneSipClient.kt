@@ -5,6 +5,7 @@ import android.content.pm.ApplicationInfo
 import com.valevoip.core.domain.client.SipClient
 import com.valevoip.core.domain.di.IoDispatcher
 import com.valevoip.core.domain.di.MainDispatcher
+import com.valevoip.core.domain.model.AudioCodec
 import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallDirection
@@ -61,6 +62,12 @@ internal class LinphoneSipClient(
 
     private val _activeAudioRoute = MutableStateFlow<AudioRoute?>(null)
     override val activeAudioRoute: StateFlow<AudioRoute?> = _activeAudioRoute.asStateFlow()
+
+    private val _availableAudioCodecs = MutableStateFlow<List<AudioCodec>>(emptyList())
+    override val availableAudioCodecs: StateFlow<List<AudioCodec>> = _availableAudioCodecs.asStateFlow()
+
+    private val _activeCallCodec = MutableStateFlow<AudioCodec?>(null)
+    override val activeCallCodec: StateFlow<AudioCodec?> = _activeCallCodec.asStateFlow()
 
     private val _callStatus = MutableStateFlow(CallStatus.IDLE)
 
@@ -120,6 +127,7 @@ internal class LinphoneSipClient(
                 Timber.d("onLastCallEnded: resetando estado de microfone e viva-voz")
                 _isMuted.value = false
                 _isSpeakerEnabled.value = false
+                _activeCallCodec.value = null
                 refreshAudioRoutes(core)
             }
 
@@ -155,6 +163,7 @@ internal class LinphoneSipClient(
                     Call.State.Updating,
                     Call.State.UpdatedByRemote -> {
                         _isMuted.value = call.microphoneMuted
+                        _activeCallCodec.value = call.currentParams?.usedAudioPayloadType?.toDomainAudioCodec()
                         refreshAudioRoutes(core, explicitActiveDevice = call.outputAudioDevice)
                         _callStatus.value = CallStatus.ACTIVE
                     }
@@ -163,6 +172,7 @@ internal class LinphoneSipClient(
                     Call.State.Paused,
                     Call.State.Resuming -> {
                         _isMuted.value = call.microphoneMuted
+                        _activeCallCodec.value = call.currentParams?.usedAudioPayloadType?.toDomainAudioCodec()
                         refreshAudioRoutes(core, explicitActiveDevice = call.outputAudioDevice)
                         _callStatus.value = CallStatus.PAUSED
                     }
@@ -173,6 +183,7 @@ internal class LinphoneSipClient(
                         if (core.callsNb == 0) {
                             _isMuted.value = false
                             _isSpeakerEnabled.value = false
+                            _activeCallCodec.value = null
                         }
                         refreshAudioRoutes(core)
                         _callStatus.value = CallStatus.ENDED
@@ -188,7 +199,10 @@ internal class LinphoneSipClient(
         })
 
         observeSettings()
-        linphoneCore?.let { refreshAudioRoutes(it) }
+        linphoneCore?.let { core ->
+            refreshAudioRoutes(core)
+            refreshAudioCodecs(core)
+        }
     }
 
     private fun observeSettings() {
@@ -407,6 +421,21 @@ internal class LinphoneSipClient(
             } ?: throw NoSuchElementException("Rota de áudio '$routeId' não disponível.")
 
             applyAudioRoute(core = core, call = call, targetOutputDevice = targetDevice)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun setAudioCodecEnabled(codecId: String, enabled: Boolean): Result<Unit> {
+        return try {
+            val core = linphoneCore ?: throw IllegalStateException("Core is null")
+            val targetPayload = core.audioPayloadTypes.firstOrNull { payloadType ->
+                payloadType.toCodecId() == codecId
+            } ?: throw NoSuchElementException("Codec de áudio '$codecId' não encontrado no motor.")
+
+            targetPayload.enable(enabled)
+            refreshAudioCodecs(core)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -645,6 +674,10 @@ internal class LinphoneSipClient(
         AudioRouteType.WIRED_HEADSET -> 1
         AudioRouteType.EARPIECE -> 2
         AudioRouteType.SPEAKER -> 3
+    }
+
+    private fun refreshAudioCodecs(core: Core) {
+        _availableAudioCodecs.value = core.audioPayloadTypes.map { it.toDomainAudioCodec() }
     }
 
     private data class RawCallLogSnapshot(

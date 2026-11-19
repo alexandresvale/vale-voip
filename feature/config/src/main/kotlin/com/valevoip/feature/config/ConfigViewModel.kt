@@ -9,8 +9,10 @@ import com.valevoip.core.domain.usecase.GenerateDiagnosticReportUseCase
 import com.valevoip.core.domain.usecase.GetAccountUseCase
 import com.valevoip.core.domain.usecase.GetCallHistoryUseCase
 import com.valevoip.core.domain.usecase.IsIgnoringBatteryOptimizationsUseCase
+import com.valevoip.core.domain.usecase.ObserveAudioCodecsUseCase
 import com.valevoip.core.domain.usecase.ObserveRegistrationStateUseCase
 import com.valevoip.core.domain.usecase.ObserveVoipSettingsUseCase
+import com.valevoip.core.domain.usecase.SetAudioCodecEnabledUseCase
 import com.valevoip.core.domain.usecase.SetEchoCancellationUseCase
 import com.valevoip.core.domain.usecase.SetSrtpEnabledUseCase
 import com.valevoip.core.domain.usecase.SetVibrateOnCallUseCase
@@ -32,10 +34,12 @@ class ConfigViewModel @Inject constructor(
     private val getAccountUseCase: GetAccountUseCase,
     private val observeRegistrationStateUseCase: ObserveRegistrationStateUseCase,
     private val observeVoipSettingsUseCase: ObserveVoipSettingsUseCase,
+    private val observeAudioCodecsUseCase: ObserveAudioCodecsUseCase,
     private val setEchoCancellationUseCase: SetEchoCancellationUseCase,
     private val setVibrateOnCallUseCase: SetVibrateOnCallUseCase,
     private val setWifiOnlyUseCase: SetWifiOnlyUseCase,
     private val setSrtpEnabledUseCase: SetSrtpEnabledUseCase,
+    private val setAudioCodecEnabledUseCase: SetAudioCodecEnabledUseCase,
     private val isIgnoringBatteryOptimizationsUseCase: IsIgnoringBatteryOptimizationsUseCase,
     private val getCallHistoryUseCase: GetCallHistoryUseCase,
     private val clearCallHistoryUseCase: ClearCallHistoryUseCase,
@@ -54,6 +58,7 @@ class ConfigViewModel @Inject constructor(
         loadAccountInfo()
         observeRegistration()
         observeSettings()
+        observeAudioCodecs()
         refreshBatteryOptimizationStatus()
         loadHistoryCount()
     }
@@ -86,6 +91,14 @@ class ConfigViewModel @Inject constructor(
         observeVoipSettingsUseCase()
             .onEach { settings ->
                 _uiState.update { it.copy(settings = settings) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeAudioCodecs() {
+        observeAudioCodecsUseCase()
+            .onEach { codecs ->
+                _uiState.update { it.copy(audioCodecs = codecs) }
             }
             .launchIn(viewModelScope)
     }
@@ -132,6 +145,28 @@ class ConfigViewModel @Inject constructor(
                 viewModelScope.launch {
                     setSrtpEnabledUseCase(action.enabled)
                     logSettingChanged("srtp_enabled", action.enabled)
+                }
+            }
+            ConfigUiAction.OpenAudioCodecsSheet -> {
+                _uiState.update { it.copy(showAudioCodecsSheet = true) }
+            }
+            ConfigUiAction.DismissAudioCodecsSheet -> {
+                _uiState.update { it.copy(showAudioCodecsSheet = false) }
+            }
+            is ConfigUiAction.ToggleAudioCodec -> {
+                viewModelScope.launch {
+                    setAudioCodecEnabledUseCase(action.codecId, action.enabled).fold(
+                        onSuccess = {
+                            logSettingChanged("codec_${action.codecId}", action.enabled)
+                        },
+                        onFailure = { error ->
+                            _uiEffect.emit(
+                                ConfigUiEffect.ShowToast(
+                                    error.message ?: "Não foi possível alterar o codec"
+                                )
+                            )
+                        }
+                    )
                 }
             }
             ConfigUiAction.RefreshBatteryOptimizationStatus -> {

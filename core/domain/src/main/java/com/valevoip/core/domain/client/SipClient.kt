@@ -1,5 +1,6 @@
 package com.valevoip.core.domain.client
 
+import com.valevoip.core.domain.model.AudioCodec
 import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
@@ -34,6 +35,16 @@ interface SipClient {
     val activeAudioRoute: StateFlow<AudioRoute?>
 
     /**
+     * Lista reativa de todos os codecs de áudio suportados pelo motor VoIP e seus estados (ativo/inativo)
+     */
+    val availableAudioCodecs: StateFlow<List<AudioCodec>>
+
+    /**
+     * Codec de áudio negociado via SDP na chamada ativa no momento, ou null quando não há mídia ativa
+     */
+    val activeCallCodec: StateFlow<AudioCodec?>
+
+    /**
      * Inicia o motor SIP com as credenciais informadas.
      */
     suspend fun register(account: SipAccount): Flow<SipRegistrationState>
@@ -47,6 +58,7 @@ interface SipClient {
     fun toggleMute(): Result<Unit>
     fun toggleSpeaker(): Result<Boolean>
     fun selectAudioRoute(routeId: String): Result<Unit>
+    fun setAudioCodecEnabled(codecId: String, enabled: Boolean): Result<Unit>
     fun sendDtmf(digit: Char): Result<Unit>
     fun toggleHold(): Result<Boolean>
     fun muteCall(callId: String): Result<Unit>

@@ -9,6 +9,7 @@ internal data class CallUiState(
     val callStatus: CallStatus = CallStatus.IDLE,
     val duration: Long = 0L,
     val formattedDuration: String = "00:00",
+    val activeCodecLabel: String? = null,
     val isMuted: Boolean = false,
     val isSpeakerOn: Boolean = false,
     val availableAudioRoutes: List<AudioRoute> = emptyList(),

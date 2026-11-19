@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
@@ -50,8 +51,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.valevoip.core.designsystem.component.AlertDialogCompose
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
+import com.valevoip.core.domain.model.AudioCodec
 import com.valevoip.core.domain.model.SipRegistrationState
 import com.valevoip.core.domain.model.VoipSettings
+import com.valevoip.feature.config.components.AudioCodecsBottomSheet
 
 @Composable
 internal fun ConfigLayout(
@@ -123,6 +126,20 @@ internal fun ConfigLayout(
                     subtitle = "Criptografa o áudio da chamada em servidores compatíveis",
                     checked = state.settings.srtpEnabled,
                     onCheckedChange = { onAction(ConfigUiAction.SetSrtpEnabled(it)) }
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 68.dp),
+                    color = ValeVoipTheme.extendedColors.cardBorder
+                )
+
+                SettingsActionRow(
+                    icon = Icons.Default.Tune,
+                    iconBgColor = ValeVoipTheme.extendedColors.blueBg,
+                    iconTint = ValeVoipTheme.extendedColors.blueFg,
+                    title = "Codecs de Áudio",
+                    subtitle = buildEnabledCodecsSummary(state.audioCodecs),
+                    onClick = { onAction(ConfigUiAction.OpenAudioCodecsSheet) }
                 )
             }
         }
@@ -273,6 +290,30 @@ internal fun ConfigLayout(
             onConfirmationClick = { onAction(ConfigUiAction.ConfirmLogout) },
             onDismissClick = { onAction(ConfigUiAction.DismissLogoutDialog) }
         )
+    }
+
+    if (state.showAudioCodecsSheet) {
+        AudioCodecsBottomSheet(
+            codecs = state.audioCodecs,
+            onToggleCodec = { codecId, enabled ->
+                onAction(ConfigUiAction.ToggleAudioCodec(codecId, enabled))
+            },
+            onDismiss = { onAction(ConfigUiAction.DismissAudioCodecsSheet) }
+        )
+    }
+}
+
+private fun buildEnabledCodecsSummary(codecs: List<AudioCodec>): String {
+    val enabled = codecs.filter { it.isEnabled }
+    if (enabled.isEmpty()) {
+        return "Toque para visualizar e selecionar codecs SIP/RTP"
+    }
+    val previewNames = enabled.take(3).joinToString(", ") { "${it.mimeType} (${it.formattedClockRate})" }
+    val remaining = enabled.size - 3
+    return if (remaining > 0) {
+        "${enabled.size} ativos: $previewNames +$remaining"
+    } else {
+        "${enabled.size} ativos: $previewNames"
     }
 }
 
