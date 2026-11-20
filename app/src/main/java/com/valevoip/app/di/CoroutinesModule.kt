@@ -1,6 +1,7 @@
 package com.valevoip.app.di
 
 import com.valevoip.core.domain.di.IoDispatcher
+import com.valevoip.core.domain.di.MainDispatcher
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,4 +16,8 @@ object CoroutinesModule {
     @Provides
     @IoDispatcher
     fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
+
+    @Provides
+    @MainDispatcher
+    fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main.immediate
 }

@@ -27,6 +27,12 @@ enum class CallStatus {
     ACTIVE,
 
     /**
+     * A chamada está em espera (pausada manualmente ou por interrupção de foco de áudio GSM).
+     * UI: Mostrar "Em espera" com opção de retomar.
+     */
+    PAUSED,
+
+    /**
      * A chamada foi finalizada, rejeitada ou houve erro de conexão.
      * UI: Mostrar "Encerrado" e fechar a tela.
      */

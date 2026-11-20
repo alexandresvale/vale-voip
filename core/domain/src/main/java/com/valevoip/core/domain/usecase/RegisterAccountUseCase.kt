@@ -15,6 +15,8 @@ sealed interface RegisterError {
     data object EmptyPassword : RegisterError
     data object EmptyDomain : RegisterError
     data object InvalidDomain : RegisterError
+    data object EmptyPort : RegisterError
+    data object InvalidPort : RegisterError
     data class SipClientError(val cause: Throwable) : RegisterError
 }
 
@@ -45,19 +47,28 @@ class RegisterAccountUseCase @Inject constructor(
         username: String,
         password: String,
         domain: String,
+        port: String = SipAccount.DEFAULT_SIP_PORT.toString(),
         transport: SipTransport = SipTransport.TCP
     ): RegisterResult {
         // 1. Regra de Negócio: Validação Rígida
         if (username.isBlank()) return RegisterResult.Error(RegisterError.EmptyUsername)
         if (password.isBlank()) return RegisterResult.Error(RegisterError.EmptyPassword)
         if (domain.isBlank()) return RegisterResult.Error(RegisterError.EmptyDomain)
-        if (!isValidHost(domain)) return RegisterResult.Error(RegisterError.InvalidDomain)
+        val cleanDomain = domain.trim()
+        if (!isValidHost(cleanDomain)) return RegisterResult.Error(RegisterError.InvalidDomain)
+
+        if (port.isBlank()) return RegisterResult.Error(RegisterError.EmptyPort)
+        val parsedPort = port.trim().toIntOrNull()
+        if (parsedPort == null || parsedPort !in MIN_PORT..MAX_PORT) {
+            return RegisterResult.Error(RegisterError.InvalidPort)
+        }
 
         // 2. Criação da Entidade no lugar certo
         val account = SipAccount(
             username = username.trim(),
             password = password.trim(),
-            domain = domain.trim(),
+            domain = cleanDomain,
+            port = parsedPort,
             transport = transport
         )
 
@@ -81,5 +92,10 @@ class RegisterAccountUseCase @Inject constructor(
 
     private fun isValidHost(host: String): Boolean {
         return domainRegex.matches(host) || ipRegex.matches(host)
+    }
+
+    private companion object {
+        const val MIN_PORT = 1
+        const val MAX_PORT = 65535
     }
 }

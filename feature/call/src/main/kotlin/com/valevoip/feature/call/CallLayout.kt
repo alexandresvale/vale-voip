@@ -13,14 +13,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.BluetoothAudio
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Dialpad
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -29,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -36,7 +43,11 @@ import androidx.compose.ui.unit.dp
 import com.valevoip.core.designsystem.component.ValeVoipActionButton
 import com.valevoip.core.designsystem.component.ValeVoipActionButtonType
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
+import com.valevoip.core.domain.model.AudioRoute
+import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
+import com.valevoip.feature.call.components.AudioRouteBottomSheet
+import com.valevoip.feature.call.components.DtmfKeypadBottomSheet
 
 @Composable
 internal fun CallLayout(
@@ -56,22 +67,45 @@ internal fun CallLayout(
 
             // Texto de Status Inteligente
             val statusText = when (state.callStatus) {
-                CallStatus.IDLE, CallStatus.DIALING -> "Conectando..."
+                CallStatus.IDLE,
+                CallStatus.DIALING -> "Conectando..."
                 CallStatus.RINGING -> "Chamando..."
                 CallStatus.INCOMING -> "Chamada Recebida"
                 CallStatus.ACTIVE -> state.formattedDuration
+                CallStatus.PAUSED -> {
+                    if (state.duration > 0L) {
+                        "Em espera • ${state.formattedDuration}"
+                    } else {
+                        "Em espera"
+                    }
+                }
                 CallStatus.ENDED -> "Encerrado"
             }
+
+            val isHighlightedStatus = state.callStatus == CallStatus.INCOMING ||
+                state.callStatus == CallStatus.PAUSED
 
             Text(
                 text = statusText,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (state.callStatus == CallStatus.INCOMING) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (isHighlightedStatus) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
+
+            val showCodecBadge = !state.activeCodecLabel.isNullOrBlank() &&
+                (state.callStatus == CallStatus.ACTIVE || state.callStatus == CallStatus.PAUSED)
+
+            if (showCodecBadge) {
+                Spacer(modifier = Modifier.height(8.dp))
+                ActiveCodecBadge(codecLabel = state.activeCodecLabel.orEmpty())
+            }
 
             Spacer(modifier = Modifier.weight(0.1f))
 
-            // Avatar (Pode adicionar uma animação de "pulsar" se for INCOMING)
+            // Avatar
             Box(
                 modifier = Modifier
                     .size(160.dp)
@@ -89,7 +123,8 @@ internal fun CallLayout(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            val isUnknownContact = state.contactName.isBlank() || state.contactName.equals("Desconhecido", ignoreCase = true)
+            val isUnknownContact = state.contactName.isBlank() ||
+                state.contactName.equals("Desconhecido", ignoreCase = true)
 
             if (!isUnknownContact) {
                 Text(
@@ -98,24 +133,71 @@ internal fun CallLayout(
                     color = MaterialTheme.colorScheme.onBackground
                 )
             }
-            
+
             Text(
                 text = state.contactNumber,
-                style = if (isUnknownContact) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,
-                color = if (isUnknownContact) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
+                style = if (isUnknownContact) {
+                    MaterialTheme.typography.headlineMedium
+                } else {
+                    MaterialTheme.typography.titleLarge
+                },
+                color = if (isUnknownContact) {
+                    MaterialTheme.colorScheme.onBackground
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
 
             Spacer(modifier = Modifier.weight(0.3f))
 
             // --- ÁREA DE BOTÕES DINÂMICA ---
             if (state.callStatus == CallStatus.INCOMING) {
-                // LAYOUT DE CHAMADA RECEBIDA (Dois Botões)
                 IncomingCallControls(onEvent)
             } else {
-                // LAYOUT DE CHAMADA ATIVA/EFETUADA (Controles + Desligar)
                 ActiveCallControls(state, onEvent)
             }
         }
+    }
+
+    if (state.isKeypadVisible) {
+        DtmfKeypadBottomSheet(
+            dtmfInput = state.dtmfInput,
+            onDigitClick = { digit -> onEvent(CallUiEvent.OnDtmfDigit(digit)) },
+            onDismiss = { onEvent(CallUiEvent.OnDismissKeypad) }
+        )
+    }
+
+    if (state.isAudioRouteSheetVisible) {
+        AudioRouteBottomSheet(
+            routes = state.availableAudioRoutes,
+            activeRouteId = state.activeAudioRoute?.id,
+            onSelectRoute = { routeId -> onEvent(CallUiEvent.OnSelectAudioRoute(routeId)) },
+            onDismiss = { onEvent(CallUiEvent.OnDismissAudioRouteSheet) }
+        )
+    }
+}
+
+@Composable
+private fun ActiveCodecBadge(codecLabel: String) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.GraphicEq,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = codecLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -148,18 +230,61 @@ private fun IncomingCallControls(onEvent: (CallUiEvent) -> Unit) {
 
 @Composable
 private fun ActiveCallControls(state: CallUiState, onEvent: (CallUiEvent) -> Unit) {
+    val audioButtonVisual = resolveAudioButtonVisual(
+        activeRoute = state.activeAudioRoute,
+        isSpeakerOn = state.isSpeakerOn
+    )
+    val isInConversation = state.callStatus == CallStatus.ACTIVE ||
+        state.callStatus == CallStatus.PAUSED
+    val isPreConnect = state.callStatus == CallStatus.DIALING ||
+        state.callStatus == CallStatus.RINGING
+    val isOnHold = state.callStatus == CallStatus.PAUSED
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        if (state.callStatus == CallStatus.ACTIVE) {
+        if (isInConversation) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ValeVoipActionButton(
                     icon = Icons.Default.Dialpad,
                     label = "Teclado",
                     buttonType = ValeVoipActionButtonType.DEFAULT,
+                    modifier = Modifier.size(64.dp),
                     onClick = { onEvent(CallUiEvent.OnShowKeypad) }
                 )
+                ValeVoipActionButton(
+                    icon = if (state.isMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                    label = "Mudo",
+                    isActive = state.isMuted,
+                    buttonType = ValeVoipActionButtonType.TOGGLE,
+                    modifier = Modifier.size(64.dp),
+                    onClick = { onEvent(CallUiEvent.OnToggleMute) }
+                )
+                ValeVoipActionButton(
+                    icon = if (isOnHold) Icons.Default.PlayArrow else Icons.Default.Pause,
+                    label = if (isOnHold) "Retomar" else "Espera",
+                    isActive = isOnHold,
+                    buttonType = ValeVoipActionButtonType.TOGGLE,
+                    modifier = Modifier.size(64.dp),
+                    onClick = { onEvent(CallUiEvent.OnToggleHold) }
+                )
+                ValeVoipActionButton(
+                    icon = audioButtonVisual.icon,
+                    label = audioButtonVisual.label,
+                    isActive = audioButtonVisual.isActive,
+                    buttonType = ValeVoipActionButtonType.TOGGLE,
+                    modifier = Modifier.size(64.dp),
+                    onClick = { onEvent(CallUiEvent.OnAudioRouteClick) }
+                )
+            }
+        } else if (isPreConnect) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
                 ValeVoipActionButton(
                     icon = if (state.isMuted) Icons.Default.MicOff else Icons.Default.Mic,
                     label = "Mudo",
@@ -168,11 +293,11 @@ private fun ActiveCallControls(state: CallUiState, onEvent: (CallUiEvent) -> Uni
                     onClick = { onEvent(CallUiEvent.OnToggleMute) }
                 )
                 ValeVoipActionButton(
-                    icon = Icons.AutoMirrored.Default.VolumeUp,
-                    label = "Viva-voz",
-                    isActive = state.isSpeakerOn,
+                    icon = audioButtonVisual.icon,
+                    label = audioButtonVisual.label,
+                    isActive = audioButtonVisual.isActive,
                     buttonType = ValeVoipActionButtonType.TOGGLE,
-                    onClick = { onEvent(CallUiEvent.OnToggleSpeaker) }
+                    onClick = { onEvent(CallUiEvent.OnAudioRouteClick) }
                 )
             }
         }
@@ -189,27 +314,74 @@ private fun ActiveCallControls(state: CallUiState, onEvent: (CallUiEvent) -> Uni
     }
 }
 
+private data class AudioButtonVisual(
+    val icon: ImageVector,
+    val label: String,
+    val isActive: Boolean
+)
+
+private fun resolveAudioButtonVisual(
+    activeRoute: AudioRoute?,
+    isSpeakerOn: Boolean
+): AudioButtonVisual {
+    return when (activeRoute?.type) {
+        AudioRouteType.BLUETOOTH -> AudioButtonVisual(
+            icon = Icons.Default.BluetoothAudio,
+            label = "Bluetooth",
+            isActive = true
+        )
+
+        AudioRouteType.WIRED_HEADSET -> AudioButtonVisual(
+            icon = Icons.Default.Headset,
+            label = "Fone",
+            isActive = true
+        )
+
+        AudioRouteType.SPEAKER -> AudioButtonVisual(
+            icon = Icons.AutoMirrored.Filled.VolumeUp,
+            label = "Viva-voz",
+            isActive = true
+        )
+
+        AudioRouteType.EARPIECE -> AudioButtonVisual(
+            icon = Icons.AutoMirrored.Filled.VolumeUp,
+            label = "Viva-voz",
+            isActive = false
+        )
+
+        null -> AudioButtonVisual(
+            icon = Icons.AutoMirrored.Filled.VolumeUp,
+            label = "Viva-voz",
+            isActive = isSpeakerOn
+        )
+    }
+}
+
 private class CallStateProvider : PreviewParameterProvider<CallUiState> {
     override val values = sequenceOf(
-        // Caso 1: Chamada Efetuada (Discando)
         CallUiState(
             contactName = "Maria Silva",
-            contactNumber = "(11) 99999-1234",
+            contactNumber = "valevoip",
             callStatus = CallStatus.DIALING
         ),
-        // Caso 2: Chamada Recebida (Alguém me ligando)
         CallUiState(
             contactName = "João Santos",
-            contactNumber = "(85) 98888-7777",
-            callStatus = CallStatus.INCOMING // Importante para testar a UI de atender
+            contactNumber = "alexandreskt16",
+            callStatus = CallStatus.INCOMING
         ),
-        // Caso 3: Chamada Ativa (Falando)
         CallUiState(
             contactName = "Suporte Técnico",
             contactNumber = "0800 123 456",
             callStatus = CallStatus.ACTIVE,
             formattedDuration = "04:20",
             isSpeakerOn = true
+        ),
+        CallUiState(
+            contactName = "Suporte Técnico",
+            contactNumber = "0800 123 456",
+            callStatus = CallStatus.PAUSED,
+            duration = 260L,
+            formattedDuration = "04:20"
         )
     )
 }

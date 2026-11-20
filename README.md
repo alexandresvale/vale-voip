@@ -1,41 +1,84 @@
 # Vale VoIP 📞
 
-Bem-vindo ao repositório do **Vale VoIP**, um aplicativo Android moderno focado em comunicação por voz (SIP/VoIP). Ele foi projetado para atuar como um ramal móvel inteligente, integrando-se de forma consistente com sua infraestrutura SIP (como Asterisk ou FreePBX). 
+Bem-vindo ao repositório do **Vale VoIP**, um aplicativo Android nativo focado em comunicação corporativa por voz sobre IP (**SIP/VoIP**). Projetado para atuar como um ramal móvel inteligente, seguro e resiliente, o aplicativo integra-se de forma transparente com servidores SIP e centrais PABX (como Asterisk, FreePBX, Issabel e OpenSIPS).
 
-Este projeto foi desenvolvido como Trabalho de Conclusão de Curso (TCC), com o objetivo de demonstrar a aplicação de boas práticas em desenvolvimento Android nativo e arquitetura de software escalável.
+Este projeto foi desenvolvido como **Trabalho de Conclusão de Curso (TCC)**, com o objetivo de demonstrar a aplicação prática de **Clean Architecture**, princípios **SOLID**, segurança criptográfica fim a fim e engenharia de software moderna no ecossistema Android.
+
+---
 
 ## 🚀 Sobre o Projeto
 
-O **Vale VoIP** apresenta uma interface elegante e amigável construída 100% com **Jetpack Compose** (padrão MVVM) e uma estrutura baseada em *Clean Architecture* com módulos independentes. O motor SIP utilizado é o **Linphone** (com arquitetura pronta para substituições futuras para PJSIP/PJSUA2), perfeitamente desacoplado da camada visual e de negócio, garantindo alta manutenibilidade e flexibilidade.
+O **Vale VoIP** apresenta uma interface moderna construída 100% com **Jetpack Compose (Material 3)** — com suporte completo a **Light Mode** e **Dark Mode** — e uma arquitetura modularizada em **15 módulos independentes**. O motor SIP/RTP utilizado é a **liblinphone (`5.5.13`)**, totalmente isolado atrás de contratos de domínio puro (`:core:domain`), garantindo baixo acoplamento, alta testabilidade e facilidade de evolução.
 
 ### 📋 Principais Funcionalidades
 
-De acordo com o nosso [documento de especificações e requisitos](docs/requirements.md), o aplicativo dispõe de:
+De acordo com o nosso [documento de especificações e requisitos técnicos](docs/requirements.md), o aplicativo dispõe de:
 
-- **Autenticação SIP (RF01):** Registro simplificado da conta com Usuário/Ramal, Senha e Domínio.
-- **Efetuar Chamadas (RF02):** Interface intuitiva de discador numérico para originar chamadas.
-- **Receber Chamadas (RF03):** Notificação em tempo real suportada por um *Foreground Service* contínuo.
-- **Controle de Áudio (RF04):** Opções durante a chamada para Mute/Unmute e acionamento de Viva-voz.
-- **Controle de Conexão (RF05):** Permite aceitar, desligar chamadas em andamento ou rejeitar tentativas recebidas.
-- **Histórico (RF06):** Visualização fácil do registro de atividades de chamadas (recebidas, efetuadas, perdidas).
+- **Autenticação SIP Multi-Protocolo (RF01):** Registro de conta com Usuário/Ramal, Senha, Domínio/IPv4, **Porta customizável** (`5060` por padrão) e seletor Material 3 para transporte **UDP**, **TCP** ou **TLS**.
+- **Discador Híbrido Numérico e Alfanumérico (RF02):** Alternância fluida entre o teclado numérico T9 (`123`) e o modo alfanumérico (`ABC`) para discar tanto para ramais numéricos (`2525`) quanto para usernames/endereços SIP (`valevoip`, `usuario@dominio`), com suporte a colagem rápida.
+- **Recebimento Contínuo em Segundo Plano (RF03):** Operação resiliente via *Foreground Service* compatível com Android 14/15 (`API 35`), reconexão automática de rede e notificações com ações rápidas (`Atender`, `Recusar`, `Desligar`).
+- **Roteamento de Áudio Multi-Dispositivo (RF04):** Controle de `Mute/Unmute`, `Viva-voz` e seletor modal (`AudioRouteBottomSheet`) para **Bluetooth**, **Fone com fio/USB**, **Viva-voz** e **Telefone (Auricular)**, com ativação inteligente do sensor de proximidade apenas no modo auricular.
+- **Chamada em Espera (Hold) & Teclado DTMF (RF05):** Suporte a pausa e retomada de chamadas (`re-INVITE` SDP) e envio de tons **DTMF** (`DtmfKeypadBottomSheet`) para navegação em URAs de atendimento.
+- **Histórico de Chamadas Completo (RF06):** Registro de chamadas efetuadas, recebidas e perdidas com busca em tempo real, filtro de perdidas, rediscagem rápida e exclusão individual ou total.
+- **Gerenciamento de Codecs de Áudio & Indicador SDP (RF07):** Seleção de codecs habilitados (`OPUS 48 kHz`, `PCMU G.711 µ-law`, `PCMA G.711 A-law`, `G722`, `GSM`, `Speex`, `L16`) via `ModalBottomSheet` e exibição em tempo real, na tela de chamada, do codec negociado via SDP (ex.: `OPUS • 48 kHz`).
+- **Segurança SRTP, Controle de Bateria & Diagnóstico (RF08):** Ativação de **Criptografia de Mídia (`SRTP`)**, Cancelamento de Eco (`AEC`), modo *Apenas Wi-Fi*, verificação de *Doze Mode* (otimização de bateria) e exportação de **Relatório de Diagnóstico Técnico** para suporte (em conformidade com a LGPD, sem exposição de senhas).
 
-## 🛠️ Tecnologias e Decisões Arquiteturais
+---
 
-A construção do software seguiu diretrizes rígidas de engenharia:
-- **Linguagem & Assincronismo:** Kotlin utilizando Coroutines e Flows para manter a UI reativa e segura contra travamentos na *Main Thread* (*Main-safe*).
-- **Interface Gráfica:** Jetpack Compose projetado num tema claro (Light Mode) focado em minimalismo corporativo.
-- **Arquitetura (RNF01):** Clean Architecture respeitada através de isolamento do domínio. Camadas de infraestrutura dependem das de domínio, favorecendo Inversão de Controle e Injeção de Dependências.
-- **Modularização (RNF01):** Múltiplos módulos (`core:domain`, `core:sip-network`, `feature:dialer`, `feature:call`) para baixo acoplamento.
-- **Build System Moderno (RNF02):** Configuração com `libs.versions.toml` e *Convention Plugins* (`build-logic`).
-- **Resiliência (RNF05):** Uso inteligente de *Foreground Service* para a manutenção contínua da conexão com o PBX.
+## 🧩 Arquitetura e Modularização (15 Módulos)
 
-## Transporte de sinalização SIP
+A construção do software segue os limites arquiteturais da **Clean Architecture** e os princípios **SOLID**:
 
-Na tela de login, escolha **TCP** ou **TLS**; a opção TCP vem selecionada para preservar compatibilidade com servidores que não oferecem TLS. TLS criptografa a sinalização SIP, e o Linphone valida tanto a cadeia do certificado quanto o nome do servidor. Não há fallback automático para TCP se a conexão TLS ou a validação falhar.
+```text
+vale-voip/
+├── app/                     # App Shell, MainActivity, AppNavHost e configuração R8/Signing
+├── build-logic/             # Gradle Convention Plugins (Application, Library, Feature, Compose, Hilt)
+├── core/
+│   ├── domain/              # 100% Kotlin Puro (Entities, UseCases e Contratos/Ports sem Android SDK)
+│   ├── sip/                 # Implementação LinphoneSipClient, AudioCodecMapper e TransportConfig
+│   ├── telecom/             # VoipForegroundService, VoipNotificationManager, Vibração e WakeLock
+│   ├── data/                # Persistência DataStore + Criptografia Google Tink (AES256-GCM + Keystore)
+│   ├── designsystem/        # Tema Material 3 (Light/Dark), Tipografia e Componentes reutilizáveis
+│   ├── navigation/          # Rotas Type-Safe (@Serializable) e NavigationCommandBus
+│   └── analytics/           # Abstração AnalyticsTracker, FirebaseAnalyticsTracker e CrashlyticsTree
+└── feature/
+    ├── splash/              # Verificação de sessão inicial e roteamento automático
+    ├── login/               # Autenticação SIP com validação de Domínio, Porta e Menu UDP/TCP/TLS
+    ├── home/                # Shell principal com BottomNavigation e gerenciamento de permissões
+    ├── dialer/              # Discador híbrido numérico (123) e alfanumérico (ABC)
+    ├── call/                # Tela de chamada ativa/recebida, Rotas Bluetooth, DTMF, Hold e Badge Codec
+    ├── history/             # Histórico de chamadas com busca, filtros e swipe-to-delete
+    └── config/              # Configurações de Áudio, Codecs, SRTP, Wi-Fi Only, Bateria e Diagnóstico
+```
 
-Para habilitar TLS no servidor, o administrador deve ativar um listener SIP/TLS, instalar um certificado emitido por uma autoridade confiável com SAN correspondente ao domínio SIP usado no app e liberar no firewall a porta TLS configurada pelo provedor. Depois, o usuário informa esse domínio e seleciona TLS no login. Não use endereços ou portas presumidos; confirme os parâmetros com o administrador/provedor. SIP/TLS protege a sinalização, não o áudio RTP: configure SRTP separadamente se a mídia também precisar de criptografia.
+---
 
-O [help oficial do SIP2SIP](https://sip2sip.info/help/) orienta que clientes descubram os servidores SIP por NAPTR/SRV para `sip2sip.info`, mas não confirma suporte a SIP/TLS nem sua porta. O app não fixa uma porta para esse provedor; confirme a disponibilidade de TLS antes de selecionar essa opção. Até lá, use TCP.
+## 🔐 Comunicação SIP, Travessia de NAT e Criptografia (TLS & SRTP)
+
+A comunicação entre o **Vale VoIP** e o servidor SIP divide-se entre o **Plano de Sinalização** e o **Plano de Mídia**:
+
+1. **Sinalização SIP (`UDP`, `TCP` e `TLS`) & Porta Customizável:**
+   - Na tela de login, o usuário pode selecionar **UDP** (padrão em redes locais de PABX), **TCP** (orientado a conexão e mais estável contra fragmentação) ou **TLS** (que criptografa os cabeçalhos SIP e valida o certificado e o *Common Name* do servidor).
+   - O campo **Porta** vem pré-preenchido com `5060` (preservando a descoberta automática via registros DNS `SRV` conforme a RFC 3263 para domínios padrão) e permite informar qualquer porta customizada (`1..65535`) utilizada pelo PABX.
+2. **Travessia de NAT (`STUN`, `ICE` e `Outbound Proxy`):**
+   - Para operar atrás de roteadores Wi-Fi e redes móveis (4G/5G), o motor utiliza **STUN** (`stun.linphone.org`) e **ICE** para descobrir o endereço IP e a porta públicos (*Server Reflexive Candidates*) antes de montar a oferta **SDP**.
+   - A política **`Outbound Proxy`** permanece ativa na conta registrada para garantir que requisições *in-dialog* (`ACK`, `BYE` e `re-INVITE` de **Chamada em Espera / Retomar**) atravessem sempre o proxy SIP central sem sofrer bloqueio de portas simétricas no NAT.
+3. **Negociação de Codecs (`SDP`) e Criptografia de Mídia (`SRTP`):**
+   - Enquanto o **SIP/TLS** protege a sinalização (quem está ligando para quem), o áudio da conversa trafega em pacotes **RTP**.
+   - Na tela de **Configurações**, o usuário pode ativar a **Criptografia de Mídia (SRTP)** para proteger o fluxo de voz com criptografia AES (`RTP/SAVP`) em servidores compatíveis, além de selecionar quais **Codecs de Áudio** (`OPUS`, `PCMU`, `PCMA`, `G722`, `GSM`, etc.) serão anunciados na oferta SDP.
+
+---
+
+## ⚙️ Qualidade, Segurança e CI/CD (GitHub Actions)
+
+- **Segurança em Repouso (*Data at Rest*):** As credenciais da conta SIP são criptografadas com **Google Tink (`AES256-GCM`)** protegido por hardware no **Android Keystore**, com regras explícitas de bloqueio de extração em backup (`backup_rules.xml` e `data_extraction_rules.xml`).
+- **Hardening de Release (API 35 & R8):** O build de produção opera com `compileSdk = 35` / `targetSdk = 35` (Android 15), minificação de código e recursos via **R8/ProGuard** (`app/proguard-rules.pro`), desativação automática de logs SIP nativos em `release` e bloqueio de tráfego HTTP em texto aberto (`android:usesCleartextTraffic="false"`).
+- **Pipeline de CI/CD Automatizado (`.github/workflows/`):**
+  1. **`android-ci.yml`:** Executado em todo Pull Request para `main` e `dev`, validando **Android Lint (`lintDebug`)**, **Testes Unitários (`:core:domain:test` + `testDebugUnitTest`)** e **Testes Integrados (`connectedDebugAndroidTest`)** em emulador Android com aceleração KVM.
+  2. **`android-staging.yml`:** Gera e publica o artefato de homologação (`vale-voip-debug-apk`) manualmente ou via label `build apk test`.
+  3. **`android-production.yml`:** Gera e publica os artefatos de produção minificados pelo R8 (`vale-voip-release-apk`, `vale-voip-release-aab` e `mapping.txt`) manualmente ou via tags de versão `v*`.
+
+---
 
 ## 🖼️ Telas do Aplicativo
 
@@ -44,17 +87,17 @@ Abaixo você confere o layout e conceito visual desenvolvido para o aplicativo.
 ### Splash Screen
 > Abertura limpa e direta, reforçando a identidade moderna do VoIP.
 
-<img src="docs/images/splash_screen_mockup_1786568150905.jpg" width="300" alt="Tela de Abertura (Splash Screen)">
+<img src="docs/images/splash_screen.png" width="300" alt="Tela de Abertura (Splash Screen)">
 
 ### Tela de Login
-> Credenciamento seguro do ramal SIP com campos acessíveis e interface polida.
+> Credenciamento seguro do ramal SIP com Porta, Menu Material 3 (`UDP`/`TCP`/`TLS`) e interface polida.
 
-<img src="docs/images/login_screen_mockup_1786568161381.jpg" width="300" alt="Tela de Login SIP">
+<img src="docs/images/login_screen.png" width="300" alt="Tela de Login SIP">
 
 ### Discador (Dialer)
-> Teclado numérico amplo e responsivo, pronto para uso intuitivo.
+> Teclado numérico (`123`) e alfanumérico (`ABC`) responsivo, pronto para ramais tradicionais e usernames SIP.
 
-<img src="docs/images/dialer_screen_mockup_1786568169424.jpg" width="300" alt="Tela do Discador">
+<img src="docs/images/dialer_screen.png" width="300" alt="Tela do Discador">
 
 ---
-*Projeto desenvolvido seguindo princípios SOLID, Clean Code e padrões recomendados para a plataforma Android.*
+*Projeto desenvolvido seguindo princípios SOLID, Clean Architecture, Clean Code e padrões oficiais recomendados para a plataforma Android.*

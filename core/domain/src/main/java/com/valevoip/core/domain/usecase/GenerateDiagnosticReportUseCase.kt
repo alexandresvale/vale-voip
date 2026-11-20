@@ -1,5 +1,6 @@
 package com.valevoip.core.domain.usecase
 
+import com.valevoip.core.domain.client.BatteryOptimizationProvider
 import com.valevoip.core.domain.client.DeviceInfoProvider
 import com.valevoip.core.domain.client.NetworkConnectivityProvider
 import com.valevoip.core.domain.client.SipClient
@@ -22,7 +23,8 @@ class GenerateDiagnosticReportUseCase @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val sipClient: SipClient,
     private val deviceInfoProvider: DeviceInfoProvider,
-    private val networkConnectivityProvider: NetworkConnectivityProvider
+    private val networkConnectivityProvider: NetworkConnectivityProvider,
+    private val batteryOptimizationProvider: BatteryOptimizationProvider
 ) {
     suspend operator fun invoke(): String {
         val account = accountRepository.getAccount()
@@ -30,11 +32,16 @@ class GenerateDiagnosticReportUseCase @Inject constructor(
         val regState = sipClient.registrationState.value
         val isConnected = networkConnectivityProvider.isConnected
         val isWifi = networkConnectivityProvider.isWifiConnected
+        val isIgnoringBatteryOpt = batteryOptimizationProvider.isIgnoringBatteryOptimizations
         val networkType = when {
             !isConnected -> "Sem conexão com a Internet"
             isWifi -> "Wi-Fi"
             else -> "Dados Móveis (Celular)"
         }
+        val enabledCodecsSummary = sipClient.availableAudioCodecs.value
+            .filter { it.isEnabled }
+            .joinToString(", ") { "${it.mimeType} (${it.formattedClockRate})" }
+            .ifBlank { "Padrão do Motor" }
         val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
 
         return buildString {
@@ -46,6 +53,7 @@ class GenerateDiagnosticReportUseCase @Inject constructor(
             appendLine("Fabricante: ${deviceInfoProvider.manufacturer}")
             appendLine("Modelo: ${deviceInfoProvider.model}")
             appendLine("Android: ${deviceInfoProvider.osVersion} (API ${deviceInfoProvider.apiLevel})")
+            appendLine("Isento de Otimização de Bateria (Doze): ${if (isIgnoringBatteryOpt) "Sim" else "Não"}")
             appendLine()
             appendLine("--- REDE E CONECTIVIDADE ---")
             appendLine("Conexão Ativa: ${if (isConnected) "Sim" else "Não"}")
@@ -55,12 +63,15 @@ class GenerateDiagnosticReportUseCase @Inject constructor(
             appendLine("--- CONTA SIP ---")
             appendLine("Ramal: ${account?.username ?: "Não configurado"}")
             appendLine("Domínio: ${account?.domain ?: "Não configurado"}")
+            appendLine("Porta: ${account?.port ?: "N/A"}")
             appendLine("Transporte: ${account?.transport?.name ?: "N/A"}")
             appendLine("Estado de Registro: $regState")
             appendLine()
             appendLine("--- MOTOR VOIP (LINPHONE) ---")
             appendLine("Versão Liblinphone: ${sipClient.getLinphoneVersion()}")
             appendLine("Estado da Chamada: ${sipClient.getSynchronousCallStatus()}")
+            appendLine("Codecs de Áudio Habilitados: $enabledCodecsSummary")
+            appendLine("Criptografia de Mídia (SRTP): ${if (settings.srtpEnabled) "Ativado" else "Desativado"}")
             appendLine("Cancelamento de Eco (AEC): ${if (settings.echoCancellationEnabled) "Ativado" else "Desativado"}")
             appendLine("Vibrar ao Chamar: ${if (settings.vibrateOnIncomingCall) "Ativado" else "Desativado"}")
         }

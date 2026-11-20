@@ -12,7 +12,8 @@ import javax.inject.Inject
 data class VoipSettingsPrefs(
     val echoCancellationEnabled: Boolean = true,
     val vibrateOnIncomingCall: Boolean = true,
-    val useWifiOnly: Boolean = false
+    val useWifiOnly: Boolean = false,
+    val srtpEnabled: Boolean = false
 )
 
 internal class VoipSettingsSerializer @Inject constructor() : Serializer<VoipSettingsPrefs> {

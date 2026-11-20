@@ -19,6 +19,7 @@ internal class AccountRepositoryImpl(
             username = prefs.username,
             password = prefs.password,
             domain = prefs.domain,
+            port = prefs.port,
             transport = SipTransport.valueOf(prefs.transport)
         )
     }
@@ -29,6 +30,7 @@ internal class AccountRepositoryImpl(
                 username = sipAccount.username,
                 password = sipAccount.password,
                 domain = sipAccount.domain,
+                port = sipAccount.port,
                 transport = sipAccount.transport.name
             )
         }

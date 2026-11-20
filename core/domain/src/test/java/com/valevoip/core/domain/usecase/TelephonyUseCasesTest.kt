@@ -1,6 +1,10 @@
 package com.valevoip.core.domain.usecase
 
+import com.valevoip.core.domain.client.BatteryOptimizationProvider
 import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.model.AudioCodec
+import com.valevoip.core.domain.model.AudioRoute
+import com.valevoip.core.domain.model.AudioRouteType
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
@@ -15,6 +19,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -24,6 +29,7 @@ class TelephonyUseCasesTest {
 
     private lateinit var fakeSipClient: FakeSipClient
     private lateinit var fakeAccountRepository: FakeAccountRepository
+    private lateinit var fakeBatteryOptimizationProvider: FakeBatteryOptimizationProvider
 
     private lateinit var answerCallUseCase: AnswerCallUseCase
     private lateinit var hangUpUseCase: HangUpUseCase
@@ -32,6 +38,17 @@ class TelephonyUseCasesTest {
     private lateinit var getCallStatusSyncUseCase: GetCallStatusSyncUseCase
     private lateinit var getCurrentCallNumberUseCase: GetCurrentCallNumberUseCase
     private lateinit var observeCallStateUseCase: ObserveCallStateUseCase
+    private lateinit var observeMuteStateUseCase: ObserveMuteStateUseCase
+    private lateinit var observeSpeakerStateUseCase: ObserveSpeakerStateUseCase
+    private lateinit var observeAudioRoutesUseCase: ObserveAudioRoutesUseCase
+    private lateinit var observeActiveAudioRouteUseCase: ObserveActiveAudioRouteUseCase
+    private lateinit var observeAudioCodecsUseCase: ObserveAudioCodecsUseCase
+    private lateinit var observeActiveCallCodecUseCase: ObserveActiveCallCodecUseCase
+    private lateinit var setAudioCodecEnabledUseCase: SetAudioCodecEnabledUseCase
+    private lateinit var selectAudioRouteUseCase: SelectAudioRouteUseCase
+    private lateinit var sendDtmfUseCase: SendDtmfUseCase
+    private lateinit var toggleHoldUseCase: ToggleHoldUseCase
+    private lateinit var isIgnoringBatteryOptimizationsUseCase: IsIgnoringBatteryOptimizationsUseCase
     private lateinit var getAccountUseCase: GetAccountUseCase
     private lateinit var unregisterAccountUseCase: UnregisterAccountUseCase
     private lateinit var observeRegistrationStateUseCase: ObserveRegistrationStateUseCase
@@ -42,6 +59,7 @@ class TelephonyUseCasesTest {
     fun setUp() {
         fakeSipClient = FakeSipClient()
         fakeAccountRepository = FakeAccountRepository()
+        fakeBatteryOptimizationProvider = FakeBatteryOptimizationProvider()
 
         answerCallUseCase = AnswerCallUseCase(fakeSipClient)
         hangUpUseCase = HangUpUseCase(fakeSipClient)
@@ -50,6 +68,17 @@ class TelephonyUseCasesTest {
         getCallStatusSyncUseCase = GetCallStatusSyncUseCase(fakeSipClient)
         getCurrentCallNumberUseCase = GetCurrentCallNumberUseCase(fakeSipClient)
         observeCallStateUseCase = ObserveCallStateUseCase(fakeSipClient)
+        observeMuteStateUseCase = ObserveMuteStateUseCase(fakeSipClient)
+        observeSpeakerStateUseCase = ObserveSpeakerStateUseCase(fakeSipClient)
+        observeAudioRoutesUseCase = ObserveAudioRoutesUseCase(fakeSipClient)
+        observeActiveAudioRouteUseCase = ObserveActiveAudioRouteUseCase(fakeSipClient)
+        observeAudioCodecsUseCase = ObserveAudioCodecsUseCase(fakeSipClient)
+        observeActiveCallCodecUseCase = ObserveActiveCallCodecUseCase(fakeSipClient)
+        setAudioCodecEnabledUseCase = SetAudioCodecEnabledUseCase(fakeSipClient)
+        selectAudioRouteUseCase = SelectAudioRouteUseCase(fakeSipClient)
+        sendDtmfUseCase = SendDtmfUseCase(fakeSipClient)
+        toggleHoldUseCase = ToggleHoldUseCase(fakeSipClient)
+        isIgnoringBatteryOptimizationsUseCase = IsIgnoringBatteryOptimizationsUseCase(fakeBatteryOptimizationProvider)
         getAccountUseCase = GetAccountUseCase(fakeAccountRepository)
         unregisterAccountUseCase = UnregisterAccountUseCase(fakeSipClient, fakeAccountRepository, testDispatcher)
         observeRegistrationStateUseCase = ObserveRegistrationStateUseCase(fakeSipClient)
@@ -85,6 +114,54 @@ class TelephonyUseCasesTest {
     }
 
     @Test
+    fun `toggleHold delegates to sipClient toggleHold`() {
+        val result = toggleHoldUseCase()
+        assertTrue(result.isSuccess)
+        assertEquals(true, result.getOrNull())
+        assertTrue(fakeSipClient.holdToggled)
+    }
+
+    @Test
+    fun `sendDtmf accepts valid RFC 4733 digits and normalizes lowercase a-d`() {
+        assertTrue(sendDtmfUseCase('5').isSuccess)
+        assertEquals('5', fakeSipClient.lastDtmfDigit)
+
+        assertTrue(sendDtmfUseCase('#').isSuccess)
+        assertEquals('#', fakeSipClient.lastDtmfDigit)
+
+        assertTrue(sendDtmfUseCase('b').isSuccess)
+        assertEquals('B', fakeSipClient.lastDtmfDigit)
+    }
+
+    @Test
+    fun `sendDtmf rejects invalid character with IllegalArgumentException`() {
+        val result = sendDtmfUseCase('Z')
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun `selectAudioRoute delegates valid routeId and rejects blank routeId`() {
+        val validResult = selectAudioRouteUseCase("bt_headset_1")
+        assertTrue(validResult.isSuccess)
+        assertEquals("bt_headset_1", fakeSipClient.lastSelectedRouteId)
+
+        val blankResult = selectAudioRouteUseCase("   ")
+        assertTrue(blankResult.isFailure)
+        assertTrue(blankResult.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun `observeAudioRoutes and observeActiveAudioRoute emit flows from sipClient`() = runTest {
+        val btRoute = AudioRoute("bt_1", "Galaxy Buds", AudioRouteType.BLUETOOTH)
+        fakeSipClient.availableAudioRoutesFlow.value = listOf(btRoute)
+        fakeSipClient.activeAudioRouteFlow.value = btRoute
+
+        assertEquals(listOf(btRoute), observeAudioRoutesUseCase().first())
+        assertEquals(btRoute, observeActiveAudioRouteUseCase().first())
+    }
+
+    @Test
     fun `getCallStatusSync delegates to sipClient getSynchronousCallStatus`() {
         fakeSipClient.currentStatus = CallStatus.ACTIVE
         assertEquals(CallStatus.ACTIVE, getCallStatusSyncUseCase())
@@ -100,6 +177,27 @@ class TelephonyUseCasesTest {
     fun `observeCallState emits status flow from sipClient`() = runTest {
         fakeSipClient.callStatusFlow.value = CallStatus.RINGING
         assertEquals(CallStatus.RINGING, observeCallStateUseCase().first())
+    }
+
+    @Test
+    fun `observeMuteState emits mute state flow from sipClient`() = runTest {
+        fakeSipClient.isMutedFlow.value = true
+        assertTrue(observeMuteStateUseCase().first())
+    }
+
+    @Test
+    fun `observeSpeakerState emits speaker state flow from sipClient`() = runTest {
+        fakeSipClient.isSpeakerEnabledFlow.value = true
+        assertTrue(observeSpeakerStateUseCase().first())
+    }
+
+    @Test
+    fun `isIgnoringBatteryOptimizations delegates to provider`() {
+        fakeBatteryOptimizationProvider.isIgnoringBatteryOptimizations = false
+        assertFalse(isIgnoringBatteryOptimizationsUseCase())
+
+        fakeBatteryOptimizationProvider.isIgnoringBatteryOptimizations = true
+        assertTrue(isIgnoringBatteryOptimizationsUseCase())
     }
 
     @Test
@@ -135,6 +233,27 @@ class TelephonyUseCasesTest {
     }
 
     @Test
+    fun `observeAudioCodecs and setAudioCodecEnabled update codec state and prevent disabling last active codec`() = runTest {
+        val opus = AudioCodec("OPUS/48000/2", "OPUS", 48000, 2, "Opus", isEnabled = true)
+        val pcmu = AudioCodec("PCMU/8000/1", "PCMU", 8000, 1, "G.711", isEnabled = true)
+        fakeSipClient.availableAudioCodecsFlow.value = listOf(opus, pcmu)
+        fakeSipClient.activeCallCodecFlow.value = opus
+
+        assertEquals(listOf(opus, pcmu), observeAudioCodecsUseCase().first())
+        assertEquals(opus, observeActiveCallCodecUseCase().first())
+
+        // Desativar OPUS com PCMU ainda ativo deve funcionar
+        val disableFirstResult = setAudioCodecEnabledUseCase("OPUS/48000/2", enabled = false)
+        assertTrue(disableFirstResult.isSuccess)
+
+        // Tentar desativar o último codec ativo (PCMU) deve ser bloqueado pela regra de domínio
+        fakeSipClient.availableAudioCodecsFlow.value = listOf(opus.copy(isEnabled = false), pcmu)
+        val disableLastResult = setAudioCodecEnabledUseCase("PCMU/8000/1", enabled = false)
+        assertTrue(disableLastResult.isFailure)
+        assertTrue(disableLastResult.exceptionOrNull() is IllegalStateException)
+    }
+
+    @Test
     fun `observeRegistrationState emits state flow from sipClient`() = runTest {
         fakeSipClient.registrationStateFlow.value = SipRegistrationState.Ok
         assertEquals(SipRegistrationState.Ok, observeRegistrationStateUseCase().first())
@@ -145,14 +264,29 @@ class TelephonyUseCasesTest {
         var hungUp = false
         var mutedToggled = false
         var speakerToggled = false
+        var holdToggled = false
+        var lastDtmfDigit: Char? = null
+        var lastSelectedRouteId: String? = null
         var currentStatus = CallStatus.IDLE
         var currentNumber: String? = null
         val callStatusFlow = MutableStateFlow(CallStatus.IDLE)
         val registrationStateFlow = MutableStateFlow<SipRegistrationState>(SipRegistrationState.None)
+        val isMutedFlow = MutableStateFlow(false)
+        val isSpeakerEnabledFlow = MutableStateFlow(false)
+        val availableAudioRoutesFlow = MutableStateFlow<List<AudioRoute>>(emptyList())
+        val activeAudioRouteFlow = MutableStateFlow<AudioRoute?>(null)
+        val availableAudioCodecsFlow = MutableStateFlow<List<AudioCodec>>(emptyList())
+        val activeCallCodecFlow = MutableStateFlow<AudioCodec?>(null)
         var unregisterEmission: Flow<SipRegistrationState> = emptyFlow()
         var unregisterShouldThrow = false
 
         override val registrationState: StateFlow<SipRegistrationState> = registrationStateFlow
+        override val isMuted: StateFlow<Boolean> = isMutedFlow
+        override val isSpeakerEnabled: StateFlow<Boolean> = isSpeakerEnabledFlow
+        override val availableAudioRoutes: StateFlow<List<AudioRoute>> = availableAudioRoutesFlow
+        override val activeAudioRoute: StateFlow<AudioRoute?> = activeAudioRouteFlow
+        override val availableAudioCodecs: StateFlow<List<AudioCodec>> = availableAudioCodecsFlow
+        override val activeCallCodec: StateFlow<AudioCodec?> = activeCallCodecFlow
         override suspend fun register(account: SipAccount): Flow<SipRegistrationState> = emptyFlow()
         override suspend fun unregister(): Flow<SipRegistrationState> {
             if (unregisterShouldThrow) throw IllegalStateException("Network Error")
@@ -162,6 +296,19 @@ class TelephonyUseCasesTest {
         override fun hangUp(): Result<Unit> { hungUp = true; return Result.success(Unit) }
         override fun toggleMute(): Result<Unit> { mutedToggled = true; return Result.success(Unit) }
         override fun toggleSpeaker(): Result<Boolean> { speakerToggled = true; return Result.success(true) }
+        override fun selectAudioRoute(routeId: String): Result<Unit> {
+            lastSelectedRouteId = routeId
+            return Result.success(Unit)
+        }
+        override fun setAudioCodecEnabled(codecId: String, enabled: Boolean): Result<Unit> = Result.success(Unit)
+        override fun sendDtmf(digit: Char): Result<Unit> {
+            lastDtmfDigit = digit
+            return Result.success(Unit)
+        }
+        override fun toggleHold(): Result<Boolean> {
+            holdToggled = true
+            return Result.success(true)
+        }
         override fun muteCall(callId: String): Result<Unit> = Result.success(Unit)
         override fun acceptCall(): Result<Unit> { acceptedCall = true; return Result.success(Unit) }
         override fun getCallStatusFlow(): Flow<CallStatus> = callStatusFlow
@@ -175,5 +322,9 @@ class TelephonyUseCasesTest {
         override suspend fun getAccount(): SipAccount? = account
         override suspend fun insertAccount(sipAccount: SipAccount) { account = sipAccount }
         override suspend fun clearAccount() { account = null }
+    }
+
+    private class FakeBatteryOptimizationProvider : BatteryOptimizationProvider {
+        override var isIgnoringBatteryOptimizations: Boolean = true
     }
 }

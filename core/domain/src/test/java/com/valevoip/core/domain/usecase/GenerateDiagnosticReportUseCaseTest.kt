@@ -1,9 +1,12 @@
 package com.valevoip.core.domain.usecase
 
+import com.valevoip.core.domain.client.BatteryOptimizationProvider
 import com.valevoip.core.domain.client.DeviceInfoProvider
 import com.valevoip.core.domain.client.NetworkConnectivityProvider
 import com.valevoip.core.domain.client.NetworkConnectivityState
 import com.valevoip.core.domain.client.SipClient
+import com.valevoip.core.domain.model.AudioCodec
+import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
@@ -28,6 +31,7 @@ class GenerateDiagnosticReportUseCaseTest {
     private lateinit var fakeSipClient: FakeSipClient
     private lateinit var fakeDeviceInfoProvider: FakeDeviceInfoProvider
     private lateinit var fakeNetworkConnectivityProvider: FakeNetworkConnectivityProvider
+    private lateinit var fakeBatteryOptimizationProvider: FakeBatteryOptimizationProvider
     private lateinit var useCase: GenerateDiagnosticReportUseCase
 
     @Before
@@ -37,18 +41,20 @@ class GenerateDiagnosticReportUseCaseTest {
         fakeSipClient = FakeSipClient()
         fakeDeviceInfoProvider = FakeDeviceInfoProvider()
         fakeNetworkConnectivityProvider = FakeNetworkConnectivityProvider()
+        fakeBatteryOptimizationProvider = FakeBatteryOptimizationProvider()
 
         useCase = GenerateDiagnosticReportUseCase(
             accountRepository = fakeAccountRepository,
             settingsRepository = fakeSettingsRepository,
             sipClient = fakeSipClient,
             deviceInfoProvider = fakeDeviceInfoProvider,
-            networkConnectivityProvider = fakeNetworkConnectivityProvider
+            networkConnectivityProvider = fakeNetworkConnectivityProvider,
+            batteryOptimizationProvider = fakeBatteryOptimizationProvider
         )
     }
 
     @Test
-    fun `invoke generates complete report with account, device and network info`() = runTest {
+    fun `invoke generates complete report with account, device, battery and network info`() = runTest {
         fakeAccountRepository.account = SipAccount(
             username = "2001",
             password = "secret_password",
@@ -60,19 +66,21 @@ class GenerateDiagnosticReportUseCaseTest {
         fakeDeviceInfoProvider.model = "Pixel 8"
         fakeDeviceInfoProvider.osVersion = "14"
         fakeDeviceInfoProvider.apiLevel = 34
+        fakeBatteryOptimizationProvider.isIgnoringBatteryOptimizations = true
         fakeNetworkConnectivityProvider.isConnected = true
         fakeNetworkConnectivityProvider.isWifiConnected = true
         fakeSipClient.registrationStateFlow.value = SipRegistrationState.Ok
-        fakeSipClient.version = "5.3.10"
+        fakeSipClient.version = "5.5.13"
 
         val report = useCase()
 
-        // Verifica cabeçalho e dispositivo
+        // Verifica cabeçalho, dispositivo e bateria
         assertTrue(report.contains("=== Vale VoIP - Relatório de Diagnóstico ==="))
         assertTrue(report.contains("Versão do App: 1.2.0"))
         assertTrue(report.contains("Fabricante: Google"))
         assertTrue(report.contains("Modelo: Pixel 8"))
         assertTrue(report.contains("Android: 14 (API 34)"))
+        assertTrue(report.contains("Isento de Otimização de Bateria (Doze): Sim"))
 
         // Verifica rede
         assertTrue(report.contains("Conexão Ativa: Sim"))
@@ -82,13 +90,24 @@ class GenerateDiagnosticReportUseCaseTest {
         // Verifica conta (garantindo que a senha NÃO vaze)
         assertTrue(report.contains("Ramal: 2001"))
         assertTrue(report.contains("Domínio: pbx.empresa.com"))
+        assertTrue(report.contains("Porta: 5060"))
         assertTrue(report.contains("Transporte: TLS"))
         assertFalse(report.contains("secret_password"))
 
         // Verifica motor VoIP
-        assertTrue(report.contains("Versão Liblinphone: 5.3.10"))
+        assertTrue(report.contains("Versão Liblinphone: 5.5.13"))
+        assertTrue(report.contains("Criptografia de Mídia (SRTP): Desativado"))
         assertTrue(report.contains("Cancelamento de Eco (AEC): Ativado"))
         assertTrue(report.contains("Vibrar ao Chamar: Ativado"))
+    }
+
+    @Test
+    fun `invoke indicates when battery optimization is active`() = runTest {
+        fakeBatteryOptimizationProvider.isIgnoringBatteryOptimizations = false
+
+        val report = useCase()
+
+        assertTrue(report.contains("Isento de Otimização de Bateria (Doze): Não"))
     }
 
     @Test
@@ -126,6 +145,7 @@ class GenerateDiagnosticReportUseCaseTest {
         override suspend fun setEchoCancellation(enabled: Boolean) { currentSettings = currentSettings.copy(echoCancellationEnabled = enabled) }
         override suspend fun setVibrate(enabled: Boolean) { currentSettings = currentSettings.copy(vibrateOnIncomingCall = enabled) }
         override suspend fun setWifiOnly(enabled: Boolean) { currentSettings = currentSettings.copy(useWifiOnly = enabled) }
+        override suspend fun setSrtpEnabled(enabled: Boolean) { currentSettings = currentSettings.copy(srtpEnabled = enabled) }
     }
 
     private class FakeDeviceInfoProvider : DeviceInfoProvider {
@@ -142,16 +162,30 @@ class GenerateDiagnosticReportUseCaseTest {
         override val connectivityState: Flow<NetworkConnectivityState> = emptyFlow()
     }
 
+    private class FakeBatteryOptimizationProvider : BatteryOptimizationProvider {
+        override var isIgnoringBatteryOptimizations: Boolean = true
+    }
+
     private class FakeSipClient : SipClient {
         val registrationStateFlow = MutableStateFlow<SipRegistrationState>(SipRegistrationState.None)
         var version: String = "5.0.0"
         override val registrationState: StateFlow<SipRegistrationState> = registrationStateFlow
+        override val isMuted: StateFlow<Boolean> = MutableStateFlow(false)
+        override val isSpeakerEnabled: StateFlow<Boolean> = MutableStateFlow(false)
+        override val availableAudioRoutes: StateFlow<List<AudioRoute>> = MutableStateFlow(emptyList())
+        override val activeAudioRoute: StateFlow<AudioRoute?> = MutableStateFlow(null)
+        override val availableAudioCodecs: StateFlow<List<AudioCodec>> = MutableStateFlow(emptyList())
+        override val activeCallCodec: StateFlow<AudioCodec?> = MutableStateFlow(null)
         override suspend fun register(account: SipAccount): Flow<SipRegistrationState> = emptyFlow()
         override suspend fun unregister(): Flow<SipRegistrationState> = emptyFlow()
         override fun makeCall(number: String): Result<Unit> = Result.success(Unit)
         override fun hangUp(): Result<Unit> = Result.success(Unit)
         override fun toggleMute(): Result<Unit> = Result.success(Unit)
         override fun toggleSpeaker(): Result<Boolean> = Result.success(true)
+        override fun selectAudioRoute(routeId: String): Result<Unit> = Result.success(Unit)
+        override fun setAudioCodecEnabled(codecId: String, enabled: Boolean): Result<Unit> = Result.success(Unit)
+        override fun sendDtmf(digit: Char): Result<Unit> = Result.success(Unit)
+        override fun toggleHold(): Result<Boolean> = Result.success(true)
         override fun muteCall(callId: String): Result<Unit> = Result.success(Unit)
         override fun acceptCall(): Result<Unit> = Result.success(Unit)
         override fun getCallStatusFlow(): Flow<CallStatus> = emptyFlow()
