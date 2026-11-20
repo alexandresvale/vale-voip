@@ -94,7 +94,7 @@ jobs:
           arch: x86_64
           profile: Nexus 6
           disable-animations: true
-          script: ./gradlew :core:data:connectedDebugAndroidTest :feature:login:connectedDebugAndroidTest --stacktrace
+          script: ./gradlew :core:data:connectedDebugAndroidTest :feature:login:connectedDebugAndroidTest --no-configuration-cache --refresh-dependencies --stacktrace
 
       - name: Upload de Relatórios de Testes Integrados
         uses: actions/upload-artifact@v7
