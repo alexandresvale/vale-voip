@@ -18,32 +18,20 @@ jobs:
   build-debug:
     name: Gerar APK de Teste (Debug)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     if: ${{ github.actor == github.repository_owner && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'build apk test') }}
 
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v7
 
-      - name: Configurar JDK 17 (Azul Zulu)
-        uses: actions/setup-java@v6
+      - name: Setup do Ambiente Vale VoIP
+        uses: ./.github/actions/setup-project
         with:
-          java-version: '17'
-          distribution: 'zulu'
-          cache: 'gradle'
+          google-services-json: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v4
-
-      - name: Conceder permissão ao gradlew
-        run: chmod +x ./gradlew
-
-      - name: Criar google-services.json
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
-
-      - name: Validar Testes Unitarios
-        run: ./gradlew :core:domain:test testDebugUnitTest --stacktrace
+      - name: Validar Testes Unitários (Todos os Módulos)
+        run: ./gradlew :core:domain:test testDebugUnitTest --continue --stacktrace
 
       - name: Construir APK Debug
         run: ./gradlew assembleDebug --stacktrace
@@ -53,4 +41,5 @@ jobs:
         with:
           name: vale-voip-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
           retention-days: 14

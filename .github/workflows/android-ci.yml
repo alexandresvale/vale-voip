@@ -1,4 +1,4 @@
-name: CI - Qualidade de PR (Lint, Testes Unitarios e Integrados)
+name: CI - Qualidade & Segurança de PR (Segurança, Lint, Testes Unitários e Integrados)
 
 on:
   push:
@@ -9,68 +9,108 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint-and-unit-tests:
-    name: Lint & Testes Unitários
+  security-audit:
+    name: Auditoria de Segurança (DevSecOps)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ github.actor == github.repository_owner }}
+
+    steps:
+      - name: Checkout do Código (Histórico Completo para Gitleaks)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validar Integridade do Gradle Wrapper (Anti-Supply Chain Attack)
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Detectar Segredos e Credenciais Vazadas (Gitleaks)
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Revisão de Vulnerabilidades em Dependências (GitHub Dependency Review)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  lint:
+    name: Análise Estática (Android Lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: ${{ github.actor == github.repository_owner }}
 
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v7
 
-      - name: Configurar JDK 17 (Azul Zulu)
-        uses: actions/setup-java@v6
+      - name: Setup do Ambiente Vale VoIP
+        uses: ./.github/actions/setup-project
         with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'gradle'
+          google-services-json: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
-      - name: Conceder permissão ao gradlew
-        run: chmod +x ./gradlew
+      - name: Executar Android Lint em Todos os Módulos
+        run: ./gradlew lintDebug --continue --stacktrace
 
-      - name: Criar google-services.json
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
-
-      - name: Executar Android Lint
-        run: ./gradlew lintDebug --stacktrace
-
-      - name: Executar Testes Unitários (Dominio + Android)
-        run: ./gradlew :core:domain:test testDebugUnitTest --stacktrace
-
-      - name: Upload de Relatórios (Lint + Testes Unitarios)
+      - name: Upload de Relatórios de Lint
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: quality-reports
+          name: lint-reports
           path: |
             **/build/reports/lint-results*.html
-            **/build/reports/tests/**
+            **/build/reports/lint-results*.xml
+          retention-days: 7
+
+  unit-tests:
+    name: Testes Unitários (Domínio, Data & ViewModels)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.actor == github.repository_owner }}
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v7
+
+      - name: Setup do Ambiente Vale VoIP
+        uses: ./.github/actions/setup-project
+        with:
+          google-services-json: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
+      - name: Executar Testes Unitários (Todos os Módulos)
+        run: ./gradlew :core:domain:test testDebugUnitTest --continue --stacktrace
+
+      - name: Upload de Relatórios de Testes Unitários
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: unit-test-reports
+          path: '**/build/reports/tests/**'
           retention-days: 7
 
   instrumented-tests:
     name: Testes Integrados (Android Emulator)
     runs-on: ubuntu-latest
-    needs: lint-and-unit-tests
+    timeout-minutes: 45
+    needs: [ security-audit, lint, unit-tests ]
     if: ${{ github.actor == github.repository_owner }}
 
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v7
 
-      - name: Configurar JDK 17 (Azul Zulu)
-        uses: actions/setup-java@v6
+      - name: Setup do Ambiente Vale VoIP
+        uses: ./.github/actions/setup-project
         with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'gradle'
+          google-services-json: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
       - name: Habilitar Permissões KVM no Runner
         run: |
@@ -78,15 +118,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Conceder permissao ao gradlew
-        run: chmod +x ./gradlew
-
-      - name: Criar google-services.json
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
-
-      - name: Executar Testes Integrados (Tink Keystore & Compose UI)
+      - name: Executar Testes Integrados em Todos os Módulos (Tink Keystore & Compose UI)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -94,7 +126,7 @@ jobs:
           arch: x86_64
           profile: Nexus 6
           disable-animations: true
-          script: ./gradlew :core:data:connectedDebugAndroidTest :feature:login:connectedDebugAndroidTest --no-configuration-cache --refresh-dependencies --stacktrace
+          script: ./gradlew connectedDebugAndroidTest --no-configuration-cache --continue --stacktrace
 
       - name: Upload de Relatórios de Testes Integrados
         uses: actions/upload-artifact@v7

@@ -1,0 +1,32 @@
+name: 'Setup Vale VoIP Environment'
+description: 'Configura JDK 17 (Azul Zulu), cache do Gradle, permissões do gradlew e google-services.json'
+
+inputs:
+  google-services-json:
+    description: 'Conteúdo JSON do google-services.json vindo dos secrets'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configurar JDK 17 (Azul Zulu)
+      uses: actions/setup-java@v6
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        cache: 'gradle'
+
+    - name: Conceder permissão de execução ao gradlew
+      shell: bash
+      run: chmod +x ./gradlew
+
+    - name: Criar e validar google-services.json
+      shell: bash
+      env:
+        GOOGLE_SERVICES_JSON: ${{ inputs.google-services-json }}
+      run: |
+        if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+          echo "::error::Secret GOOGLE_SERVICES_JSON está vazia ou não foi configurada no repositório."
+          exit 1
+        fi
+        echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
