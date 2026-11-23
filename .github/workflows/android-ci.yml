@@ -118,6 +118,9 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Pré-compilar APKs de Teste Instrumentado (Antes de Subir o Emulador)
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+
       - name: Executar Testes Integrados em Todos os Módulos (Tink Keystore & Compose UI)
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -134,4 +137,5 @@ jobs:
         with:
           name: instrumented-test-reports
           path: '**/build/reports/androidTests/connected/**'
+          if-no-files-found: ignore
           retention-days: 7
