@@ -38,7 +38,7 @@ jobs:
 
       - name: Revisão de Vulnerabilidades em Dependências (GitHub Dependency Review)
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
 
@@ -59,6 +59,40 @@ jobs:
 
       - name: Executar Android Lint em Todos os Módulos
         run: ./gradlew lintDebug --continue --stacktrace
+
+      - name: Gerar Resumo Visual do Android Lint (Job Summary)
+        if: always()
+        run: |
+          python3 - << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import glob, os, xml.etree.ElementTree as ET
+
+          files = sorted(glob.glob("**/build/reports/lint-results*.xml", recursive=True))
+          print("## 🔍 Relatório de Análise Estática (Android Lint)\n")
+          if not files:
+              print("⚠️ Nenhum relatório XML do Lint foi encontrado.")
+          else:
+              print("| Módulo | Erros (❌) | Avisos (⚠️) | Informações (ℹ️) | Status |")
+              print("| :--- | :---: | :---: | :---: | :---: |")
+              total_err, total_warn, total_info = 0, 0, 0
+              for f in files:
+                  parts = f.split(os.sep)
+                  build_idx = parts.index("build") if "build" in parts else 1
+                  module = ":" + ":".join(parts[:build_idx])
+                  try:
+                      root = ET.parse(f).getroot()
+                      issues = root.findall("issue")
+                      errs = sum(1 for i in issues if i.attrib.get("severity") in ("Error", "Fatal"))
+                      warns = sum(1 for i in issues if i.attrib.get("severity") == "Warning")
+                      infos = sum(1 for i in issues if i.attrib.get("severity") == "Information")
+                      total_err += errs
+                      total_warn += warns
+                      total_info += infos
+                      status = "✅ Aprovado" if errs == 0 else "❌ Falhou"
+                      print(f"| `{module}` | {errs} | {warns} | {infos} | {status} |")
+                  except Exception as e:
+                      print(f"| `{module}` | - | - | - | ⚠️ Erro ao ler XML |")
+              print(f"| **Total Geral** | **{total_err}** | **{total_warn}** | **{total_info}** | **{'✅ Limpo' if total_err == 0 else '❌ Com Erros'}** |\n")
+          EOF
 
       - name: Upload de Relatórios de Lint
         uses: actions/upload-artifact@v7
@@ -87,6 +121,39 @@ jobs:
 
       - name: Executar Testes Unitários (Todos os Módulos)
         run: ./gradlew :core:domain:test testDebugUnitTest --continue --stacktrace
+
+      - name: Gerar Resumo Visual de Testes Unitários (Job Summary)
+        if: always()
+        run: |
+          python3 - << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import glob, os, xml.etree.ElementTree as ET
+
+          files = sorted(glob.glob("**/build/test-results/**/*.xml", recursive=True))
+          print("## 🧪 Relatório de Testes Unitários (Domínio, Data & ViewModels)\n")
+          if not files:
+              print("⚠️ Nenhum resultado de teste unitário foi encontrado.")
+          else:
+              print("| Módulo | Suíte de Teste | Total | Passaram (✅) | Falharam (❌) | Ignorados (⏭️) | Tempo (s) |")
+              print("| :--- | :--- | :---: | :---: | :---: | :---: | :---: |")
+              t_all, t_pass, t_fail, t_skip, t_time = 0, 0, 0, 0, 0.0
+              for f in files:
+                  parts = f.split(os.sep)
+                  build_idx = parts.index("build") if "build" in parts else 1
+                  module = ":" + ":".join(parts[:build_idx])
+                  try:
+                      root = ET.parse(f).getroot()
+                      suite = root.attrib.get("name", "").split(".")[-1]
+                      tests = int(root.attrib.get("tests", 0))
+                      failures = int(root.attrib.get("failures", 0)) + int(root.attrib.get("errors", 0))
+                      skipped = int(root.attrib.get("skipped", 0))
+                      passed = tests - failures - skipped
+                      time_s = float(root.attrib.get("time", 0.0))
+                      t_all += tests; t_pass += passed; t_fail += failures; t_skip += skipped; t_time += time_s
+                      print(f"| `{module}` | `{suite}` | {tests} | {passed} | {failures} | {skipped} | {time_s:.3f}s |")
+                  except Exception:
+                      pass
+              print(f"| **Total Geral** | **{len(files)} suítes** | **{t_all}** | **{t_pass}** | **{t_fail}** | **{t_skip}** | **{t_time:.2f}s** |\n")
+          EOF
 
       - name: Upload de Relatórios de Testes Unitários
         uses: actions/upload-artifact@v7
@@ -130,6 +197,45 @@ jobs:
           profile: Nexus 6
           disable-animations: true
           script: ./gradlew connectedDebugAndroidTest --no-configuration-cache --continue --stacktrace
+
+      - name: Gerar Resumo Visual de Testes Integrados (Job Summary)
+        if: always()
+        run: |
+          python3 - << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import glob, os, xml.etree.ElementTree as ET
+
+          files = sorted(glob.glob("**/build/outputs/androidTest-results/connected/**/*.xml", recursive=True))
+          print("## 📱 Relatório de Testes Integrados (Android Emulator - API 30)\n")
+          if not files:
+              print("⚠️ Nenhum resultado de teste instrumentado foi encontrado.")
+          else:
+              print("| Módulo | Classe de Teste | Caso de Teste | Status | Tempo (s) |")
+              print("| :--- | :--- | :--- | :---: | :---: |")
+              t_all, t_pass, t_fail, t_time = 0, 0, 0, 0.0
+              for f in files:
+                  parts = f.split(os.sep)
+                  build_idx = parts.index("build") if "build" in parts else 1
+                  module = ":" + ":".join(parts[:build_idx])
+                  try:
+                      root = ET.parse(f).getroot()
+                      for tc in root.findall("testcase"):
+                          cls_name = tc.attrib.get("classname", "").split(".")[-1]
+                          test_name = tc.attrib.get("name", "")
+                          time_s = float(tc.attrib.get("time", 0.0))
+                          failed = tc.find("failure") is not None or tc.find("error") is not None
+                          t_all += 1
+                          t_time += time_s
+                          if failed:
+                              t_fail += 1
+                              status = "❌ Falhou"
+                          else:
+                              t_pass += 1
+                              status = "✅ Passou"
+                          print(f"| `{module}` | `{cls_name}` | `{test_name}` | {status} | {time_s:.3f}s |")
+                  except Exception:
+                      pass
+              print(f"\n**Resumo no Dispositivo:** `{t_all}` testes executados | ✅ `{t_pass}` aprovados | ❌ `{t_fail}` falhas | ⏱️ Tempo total: `{t_time:.2f}s`\n")
+          EOF
 
       - name: Upload de Relatórios de Testes Integrados
         uses: actions/upload-artifact@v7
