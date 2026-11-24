@@ -7,6 +7,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -22,23 +23,38 @@ internal class DialerViewModel @Inject constructor() : ViewModel() {
     fun onEvent(event: DialerUiEvent) {
         when (event) {
             is DialerUiEvent.OnDigitClick -> onDigitClick(event.digit)
+            is DialerUiEvent.OnTextChange -> onTextChange(event.text)
+            is DialerUiEvent.OnToggleInputMode -> toggleInputMode()
+            DialerUiEvent.OnActivateAlphaNumericMode -> activateAlphaNumericMode()
             DialerUiEvent.OnBackspace -> onBackspace()
+            DialerUiEvent.OnClearAll -> onClearAll()
             DialerUiEvent.OnLongClickZero -> onLongClickZero()
             DialerUiEvent.OnCallClick -> onCallClick()
         }
     }
 
     private fun onDigitClick(digit: String) {
-        if (_uiState.value.number.length < 30) {
-            _uiState.value = _uiState.value.copy(number = _uiState.value.number + digit)
+        _uiState.update { current ->
+            if (current.number.length < MAX_TARGET_LENGTH) {
+                current.copy(number = current.number + digit)
+            } else {
+                current
+            }
         }
     }
 
     private fun onBackspace() {
-        val currentNumber = _uiState.value.number
-        if (currentNumber.isNotEmpty()) {
-            _uiState.value = _uiState.value.copy(number = currentNumber.dropLast(1))
+        _uiState.update { current ->
+            if (current.number.isNotEmpty()) {
+                current.copy(number = current.number.dropLast(1))
+            } else {
+                current
+            }
         }
+    }
+
+    private fun onClearAll() {
+        _uiState.update { it.copy(number = "") }
     }
 
     private fun onLongClickZero() {
@@ -46,26 +62,37 @@ internal class DialerViewModel @Inject constructor() : ViewModel() {
     }
 
     private fun onTextChange(newText: String) {
-        // Usado quando o teclado QWERTY está ativo
-        _uiState.value = _uiState.value.copy(number = newText)
+        val sanitized = newText
+            .replace("\n", "")
+            .replace("\r", "")
+            .take(MAX_TARGET_LENGTH)
+        _uiState.update { it.copy(number = sanitized) }
     }
 
     fun toggleInputMode() {
-        _uiState.value = _uiState.value.copy(
-            isAlphaNumericMode = !_uiState.value.isAlphaNumericMode
-        )
+        _uiState.update { it.copy(isAlphaNumericMode = !it.isAlphaNumericMode) }
+    }
+
+    private fun activateAlphaNumericMode() {
+        _uiState.update { current ->
+            if (current.isAlphaNumericMode) current else current.copy(isAlphaNumericMode = true)
+        }
     }
 
     private fun onCallClick() {
-        val number = _uiState.value.number
-        if (number.isNotBlank()) {
+        val target = _uiState.value.number.trim()
+        if (target.isNotEmpty()) {
             viewModelScope.launch {
-                _sideEffects.send(DialerEffect.NavigateToCall(number))
+                _sideEffects.send(DialerEffect.NavigateToCall(target))
             }
         } else {
             viewModelScope.launch {
-                _sideEffects.send(DialerEffect.ShowError("Digite um número válido"))
+                _sideEffects.send(DialerEffect.ShowError("Digite um ramal ou usuário SIP válido"))
             }
         }
+    }
+
+    private companion object {
+        const val MAX_TARGET_LENGTH = 128
     }
 }

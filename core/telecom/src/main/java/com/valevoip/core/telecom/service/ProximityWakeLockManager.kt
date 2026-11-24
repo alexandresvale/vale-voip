@@ -2,74 +2,67 @@ package com.valevoip.core.telecom.service
 
 import android.content.Context
 import android.os.PowerManager
-import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Gerencia exclusivamente o sensor de proximidade (PROXIMITY_SCREEN_OFF_WAKE_LOCK) durante chamadas.
+ * Os WakeLocks de CPU (PARTIAL_WAKE_LOCK) e Wi-Fi já são gerenciados nativamente pelo
+ * AndroidPlatformHelper da SDK Linphone.
+ */
 @Singleton
 class ProximityWakeLockManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private var proximityWakeLock: PowerManager.WakeLock? = null
-    private var cpuWakeLock: PowerManager.WakeLock? = null
     private val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
 
     companion object {
         private const val WAKE_LOCK_TIMEOUT_MS = 30 * 60 * 1000L // 30 minutos
-        private const val TAG = "VALEVOIP_TELECOM"
     }
 
-    fun acquire() {
-        acquireProximityLock()
-        acquireCpuLock()
+    fun setProximitySensorEnabled(enabled: Boolean) {
+        if (enabled) {
+            acquireProximityLock()
+        } else {
+            release()
+        }
     }
 
     fun release() {
-        releaseLock(proximityWakeLock, "Proximity")
+        val lock = proximityWakeLock
+        if (lock?.isHeld == true) {
+            try {
+                lock.release()
+                Timber.d("ProximityWakeLock liberado")
+            } catch (e: Exception) {
+                Timber.e(e, "Falha ao liberar ProximityWakeLock")
+            }
+        }
         proximityWakeLock = null
-        releaseLock(cpuWakeLock, "CPU")
-        cpuWakeLock = null
     }
 
     private fun acquireProximityLock() {
-        if (proximityWakeLock == null &&
-            powerManager.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)
-        ) {
+        if (!powerManager.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
+            return
+        }
+        if (proximityWakeLock == null) {
             proximityWakeLock = powerManager.newWakeLock(
                 PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
                 "ValeVoip:ProximityLock"
-            )
-        }
-        acquireLock(proximityWakeLock, "Proximity")
-    }
-
-    private fun acquireCpuLock() {
-        if (cpuWakeLock == null) {
-            cpuWakeLock = powerManager.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK,
-                "ValeVoip:CpuLock"
-            )
-        }
-        acquireLock(cpuWakeLock, "CPU")
-    }
-
-    private fun acquireLock(wakeLock: PowerManager.WakeLock?, tag: String) {
-        if (wakeLock?.isHeld == false) {
-            try {
-                wakeLock.acquire(WAKE_LOCK_TIMEOUT_MS)
-            } catch (e: Exception) {
-                Log.e(TAG, "ProximityWakeLockManager | Falha ao adquirir $tag WakeLock", e)
+            ).apply {
+                setReferenceCounted(false)
             }
         }
-    }
-
-    private fun releaseLock(wakeLock: PowerManager.WakeLock?, tag: String) {
-        if (wakeLock?.isHeld == true) {
+        val lock = proximityWakeLock
+        if (lock?.isHeld == false) {
             try {
-                wakeLock.release()
+                lock.acquire(WAKE_LOCK_TIMEOUT_MS)
+                Timber.d("ProximityWakeLock adquirido")
             } catch (e: Exception) {
-                Log.e(TAG, "ProximityWakeLockManager | Falha ao liberar $tag WakeLock", e)
+                Timber.e(e, "Falha ao adquirir ProximityWakeLock")
             }
         }
     }

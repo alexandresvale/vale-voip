@@ -1,0 +1,45 @@
+name: CD - Gerar Versao de Teste (APK Debug)
+
+on:
+  pull_request:
+    branches: [ "main", "dev" ]
+    types:
+      - labeled
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug:
+    name: Gerar APK de Teste (Debug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ github.actor == github.repository_owner && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'build apk test') }}
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v7
+
+      - name: Setup do Ambiente Vale VoIP
+        uses: ./.github/actions/setup-project
+        with:
+          google-services-json: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
+      - name: Validar Testes Unitários (Todos os Módulos)
+        run: ./gradlew :core:domain:test testDebugUnitTest --continue --stacktrace
+
+      - name: Construir APK Debug
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Publicar Artefato APK Debug
+        uses: actions/upload-artifact@v7
+        with:
+          name: vale-voip-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

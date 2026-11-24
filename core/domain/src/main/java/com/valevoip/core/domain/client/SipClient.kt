@@ -1,5 +1,7 @@
 package com.valevoip.core.domain.client
 
+import com.valevoip.core.domain.model.AudioCodec
+import com.valevoip.core.domain.model.AudioRoute
 import com.valevoip.core.domain.model.CallStatus
 import com.valevoip.core.domain.model.SipAccount
 import com.valevoip.core.domain.model.SipRegistrationState
@@ -11,6 +13,36 @@ interface SipClient {
      * Fluxo contínuo que emite o estado de registro atual
      */
     val registrationState: StateFlow<SipRegistrationState>
+
+    /**
+     * Fluxo contínuo que emite se o microfone da chamada atual está silenciado
+     */
+    val isMuted: StateFlow<Boolean>
+
+    /**
+     * Fluxo contínuo que emite se a saída de áudio atual é o viva-voz (alto-falante)
+     */
+    val isSpeakerEnabled: StateFlow<Boolean>
+
+    /**
+     * Lista reativa das rotas de saída de áudio disponíveis para chamada (Telefone, Viva-voz, Bluetooth, Fone)
+     */
+    val availableAudioRoutes: StateFlow<List<AudioRoute>>
+
+    /**
+     * Rota de saída de áudio ativa no momento
+     */
+    val activeAudioRoute: StateFlow<AudioRoute?>
+
+    /**
+     * Lista reativa de todos os codecs de áudio suportados pelo motor VoIP e seus estados (ativo/inativo)
+     */
+    val availableAudioCodecs: StateFlow<List<AudioCodec>>
+
+    /**
+     * Codec de áudio negociado via SDP na chamada ativa no momento, ou null quando não há mídia ativa
+     */
+    val activeCallCodec: StateFlow<AudioCodec?>
 
     /**
      * Inicia o motor SIP com as credenciais informadas.
@@ -25,6 +57,10 @@ interface SipClient {
     fun hangUp(): Result<Unit>
     fun toggleMute(): Result<Unit>
     fun toggleSpeaker(): Result<Boolean>
+    fun selectAudioRoute(routeId: String): Result<Unit>
+    fun setAudioCodecEnabled(codecId: String, enabled: Boolean): Result<Unit>
+    fun sendDtmf(digit: Char): Result<Unit>
+    fun toggleHold(): Result<Boolean>
     fun muteCall(callId: String): Result<Unit>
     fun acceptCall(): Result<Unit>
     fun getCallStatusFlow(): Flow<CallStatus>

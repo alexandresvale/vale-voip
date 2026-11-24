@@ -8,10 +8,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.valevoip.app.navigation.AppNavHost
 import com.valevoip.core.designsystem.theme.ValeVoipTheme
+import com.valevoip.core.navigation.NavigationCommand
 import com.valevoip.core.navigation.NavigationCommandBus
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
-
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -26,14 +26,23 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ValeVoipTheme {
+                Timber.d("MainActivity iniciou")
                 AppNavHost(navigationCommandBus = navigationCommandBus)
             }
         }
-        Timber.i("Aplicativo iniciado")
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleNotificationDeepLink(intent)
+    }
+
+    private fun handleNotificationDeepLink(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (data.scheme == "valevoip" && data.host == "call") {
+            val number = data.getQueryParameter("number").orEmpty()
+            navigationCommandBus.navigate(NavigationCommand.ToCall(number))
+        }
     }
 }

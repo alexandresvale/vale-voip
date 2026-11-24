@@ -3,6 +3,7 @@ package com.valevoip.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.valevoip.core.domain.usecase.GetAccountUseCase
+import com.valevoip.core.domain.usecase.IsIgnoringBatteryOptimizationsUseCase
 import com.valevoip.core.domain.usecase.ObserveRegistrationStateUseCase
 import com.valevoip.core.domain.usecase.RegisterAccountUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,14 +19,30 @@ internal class HomeViewModel @Inject constructor(
     private val getAccountUseCase: GetAccountUseCase,
     private val registerAccountUseCase: RegisterAccountUseCase,
     private val observeRegistrationStateUseCase: ObserveRegistrationStateUseCase,
+    private val isIgnoringBatteryOptimizationsUseCase: IsIgnoringBatteryOptimizationsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private var hasPromptedBatteryOptimization = false
+
     init {
         observeConnection()
         autoReconnect()
+    }
+
+    fun checkBatteryOptimizationOnce() {
+        if (hasPromptedBatteryOptimization) return
+        hasPromptedBatteryOptimization = true
+
+        if (!isIgnoringBatteryOptimizationsUseCase()) {
+            _uiState.update { it.copy(showBatteryOptimizationDialog = true) }
+        }
+    }
+
+    fun dismissBatteryOptimizationDialog() {
+        _uiState.update { it.copy(showBatteryOptimizationDialog = false) }
     }
 
     private fun observeConnection() {
@@ -40,7 +57,13 @@ internal class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val account = getAccountUseCase()
             if (account != null) {
-                registerAccountUseCase(account.username, account.password, account.domain, account.transport)
+                registerAccountUseCase(
+                    username = account.username,
+                    password = account.password,
+                    domain = account.domain,
+                    port = account.port.toString(),
+                    transport = account.transport
+                )
             }
         }
     }

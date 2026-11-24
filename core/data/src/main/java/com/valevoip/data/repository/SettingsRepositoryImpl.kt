@@ -31,7 +31,8 @@ internal class SettingsRepositoryImpl @Inject constructor(
         VoipSettings(
             echoCancellationEnabled = prefs.echoCancellationEnabled,
             vibrateOnIncomingCall = prefs.vibrateOnIncomingCall,
-            useWifiOnly = prefs.useWifiOnly
+            useWifiOnly = prefs.useWifiOnly,
+            srtpEnabled = prefs.srtpEnabled
         )
     }
 
@@ -51,5 +52,9 @@ internal class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setWifiOnly(enabled: Boolean) {
         dataStore.updateData { it.copy(useWifiOnly = enabled) }
+    }
+
+    override suspend fun setSrtpEnabled(enabled: Boolean) {
+        dataStore.updateData { it.copy(srtpEnabled = enabled) }
     }
 }

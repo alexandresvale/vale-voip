@@ -12,6 +12,7 @@ internal data class SipTransportConfiguration(
 internal fun sipTransportConfiguration(transport: SipTransport): SipTransportConfiguration =
     SipTransportConfiguration(
         linphoneTransport = when (transport) {
+            SipTransport.UDP -> TransportType.Udp
             SipTransport.TCP -> TransportType.Tcp
             SipTransport.TLS -> TransportType.Tls
         },

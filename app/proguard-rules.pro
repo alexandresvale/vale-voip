@@ -1,21 +1,37 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Regras ProGuard / R8 — Vale VoIP (Produção)
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Preserva nomes de arquivo e números de linha para stacktraces legíveis no Firebase Crashlytics
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Preserva anotações e assinaturas genéricas exigidas por DI, Serialization e JNI
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# --- Linphone SDK (JNI Callbacks & Native Structs) ---
+-keep class org.linphone.core.** { *; }
+-keep class org.linphone.mediastream.** { *; }
+-keep class org.bctoolbox.** { *; }
+-dontwarn org.linphone.**
+
+# --- Google Tink (Keystore & Protobuf Keysets) ---
+-keep class * extends com.google.crypto.tink.shaded.protobuf.GeneratedMessageLite {
+    <fields>;
+}
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
+
+# --- Kotlinx Serialization (DataStore Prefs & Compose Navigation Type-Safe Routes) ---
+-keepattributes RuntimeVisibleAnnotations,AnnotationDefault
+-if @kotlinx.serialization.Serializable class **
+-keepclassmembers class <1> {
+    static <1>$Companion Companion;
+}
+-if @kotlinx.serialization.Serializable class ** {
+    static **$* *;
+}
+-keepnames class <2>$$serializer {
+    *;
+}
+-keepclassmembers class com.valevoip.** {
+    @kotlinx.serialization.Serializable <methods>;
+}

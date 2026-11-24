@@ -1,0 +1,247 @@
+name: CI - Qualidade & Segurança de PR (Segurança, Lint, Testes Unitários e Integrados)
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-audit:
+    name: Auditoria de Segurança (DevSecOps)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ github.actor == github.repository_owner }}
+
+    steps:
+      - name: Checkout do Código (Histórico Completo para Gitleaks)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validar Integridade do Gradle Wrapper (Anti-Supply Chain Attack)
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Detectar Segredos e Credenciais Vazadas (Gitleaks)
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Revisão de Vulnerabilidades em Dependências (GitHub Dependency Review)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+
+  lint:
+    name: Análise Estática (Android Lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.actor == github.repository_owner }}
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v7
+
+      - name: Setup do Ambiente Vale VoIP
+        uses: ./.github/actions/setup-project
+        with:
+          google-services-json: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
+      - name: Executar Android Lint em Todos os Módulos
+        run: ./gradlew lintDebug --continue --stacktrace
+
+      - name: Gerar Resumo Visual do Android Lint (Job Summary)
+        if: always()
+        run: |
+          python3 - << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import glob, os, xml.etree.ElementTree as ET
+
+          files = sorted(glob.glob("**/build/reports/lint-results*.xml", recursive=True))
+          print("## 🔍 Relatório de Análise Estática (Android Lint)\n")
+          if not files:
+              print("⚠️ Nenhum relatório XML do Lint foi encontrado.")
+          else:
+              print("| Módulo | Erros (❌) | Avisos (⚠️) | Informações (ℹ️) | Status |")
+              print("| :--- | :---: | :---: | :---: | :---: |")
+              total_err, total_warn, total_info = 0, 0, 0
+              for f in files:
+                  parts = f.split(os.sep)
+                  build_idx = parts.index("build") if "build" in parts else 1
+                  module = ":" + ":".join(parts[:build_idx])
+                  try:
+                      root = ET.parse(f).getroot()
+                      issues = root.findall("issue")
+                      errs = sum(1 for i in issues if i.attrib.get("severity") in ("Error", "Fatal"))
+                      warns = sum(1 for i in issues if i.attrib.get("severity") == "Warning")
+                      infos = sum(1 for i in issues if i.attrib.get("severity") == "Information")
+                      total_err += errs
+                      total_warn += warns
+                      total_info += infos
+                      status = "✅ Aprovado" if errs == 0 else "❌ Falhou"
+                      print(f"| `{module}` | {errs} | {warns} | {infos} | {status} |")
+                  except Exception as e:
+                      print(f"| `{module}` | - | - | - | ⚠️ Erro ao ler XML |")
+              print(f"| **Total Geral** | **{total_err}** | **{total_warn}** | **{total_info}** | **{'✅ Limpo' if total_err == 0 else '❌ Com Erros'}** |\n")
+          EOF
+
+      - name: Upload de Relatórios de Lint
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: lint-reports
+          path: |
+            **/build/reports/lint-results*.html
+            **/build/reports/lint-results*.xml
+          retention-days: 7
+
+  unit-tests:
+    name: Testes Unitários (Domínio, Data & ViewModels)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.actor == github.repository_owner }}
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v7
+
+      - name: Setup do Ambiente Vale VoIP
+        uses: ./.github/actions/setup-project
+        with:
+          google-services-json: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
+      - name: Executar Testes Unitários (Todos os Módulos)
+        run: ./gradlew :core:domain:test testDebugUnitTest --continue --stacktrace
+
+      - name: Gerar Resumo Visual de Testes Unitários (Job Summary)
+        if: always()
+        run: |
+          python3 - << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import glob, os, xml.etree.ElementTree as ET
+
+          files = sorted(glob.glob("**/build/test-results/**/*.xml", recursive=True))
+          print("## 🧪 Relatório de Testes Unitários (Domínio, Data & ViewModels)\n")
+          if not files:
+              print("⚠️ Nenhum resultado de teste unitário foi encontrado.")
+          else:
+              print("| Módulo | Suíte de Teste | Total | Passaram (✅) | Falharam (❌) | Ignorados (⏭️) | Tempo (s) |")
+              print("| :--- | :--- | :---: | :---: | :---: | :---: | :---: |")
+              t_all, t_pass, t_fail, t_skip, t_time = 0, 0, 0, 0, 0.0
+              for f in files:
+                  parts = f.split(os.sep)
+                  build_idx = parts.index("build") if "build" in parts else 1
+                  module = ":" + ":".join(parts[:build_idx])
+                  try:
+                      root = ET.parse(f).getroot()
+                      suite = root.attrib.get("name", "").split(".")[-1]
+                      tests = int(root.attrib.get("tests", 0))
+                      failures = int(root.attrib.get("failures", 0)) + int(root.attrib.get("errors", 0))
+                      skipped = int(root.attrib.get("skipped", 0))
+                      passed = tests - failures - skipped
+                      time_s = float(root.attrib.get("time", 0.0))
+                      t_all += tests; t_pass += passed; t_fail += failures; t_skip += skipped; t_time += time_s
+                      print(f"| `{module}` | `{suite}` | {tests} | {passed} | {failures} | {skipped} | {time_s:.3f}s |")
+                  except Exception:
+                      pass
+              print(f"| **Total Geral** | **{len(files)} suítes** | **{t_all}** | **{t_pass}** | **{t_fail}** | **{t_skip}** | **{t_time:.2f}s** |\n")
+          EOF
+
+      - name: Upload de Relatórios de Testes Unitários
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: unit-test-reports
+          path: '**/build/reports/tests/**'
+          retention-days: 7
+
+  instrumented-tests:
+    name: Testes Integrados (Android Emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: [ security-audit, lint, unit-tests ]
+    if: ${{ github.actor == github.repository_owner }}
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v7
+
+      - name: Setup do Ambiente Vale VoIP
+        uses: ./.github/actions/setup-project
+        with:
+          google-services-json: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
+      - name: Habilitar Permissões KVM no Runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Pré-compilar APKs de Teste Instrumentado (Antes de Subir o Emulador)
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Executar Testes Integrados em Todos os Módulos (Tink Keystore & Compose UI)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: Nexus 6
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest --no-configuration-cache --continue --stacktrace
+
+      - name: Gerar Resumo Visual de Testes Integrados (Job Summary)
+        if: always()
+        run: |
+          python3 - << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import glob, os, xml.etree.ElementTree as ET
+
+          files = sorted(glob.glob("**/build/outputs/androidTest-results/connected/**/*.xml", recursive=True))
+          print("## 📱 Relatório de Testes Integrados (Android Emulator - API 30)\n")
+          if not files:
+              print("⚠️ Nenhum resultado de teste instrumentado foi encontrado.")
+          else:
+              print("| Módulo | Classe de Teste | Caso de Teste | Status | Tempo (s) |")
+              print("| :--- | :--- | :--- | :---: | :---: |")
+              t_all, t_pass, t_fail, t_time = 0, 0, 0, 0.0
+              for f in files:
+                  parts = f.split(os.sep)
+                  build_idx = parts.index("build") if "build" in parts else 1
+                  module = ":" + ":".join(parts[:build_idx])
+                  try:
+                      root = ET.parse(f).getroot()
+                      for tc in root.findall("testcase"):
+                          cls_name = tc.attrib.get("classname", "").split(".")[-1]
+                          test_name = tc.attrib.get("name", "")
+                          time_s = float(tc.attrib.get("time", 0.0))
+                          failed = tc.find("failure") is not None or tc.find("error") is not None
+                          t_all += 1
+                          t_time += time_s
+                          if failed:
+                              t_fail += 1
+                              status = "❌ Falhou"
+                          else:
+                              t_pass += 1
+                              status = "✅ Passou"
+                          print(f"| `{module}` | `{cls_name}` | `{test_name}` | {status} | {time_s:.3f}s |")
+                  except Exception:
+                      pass
+              print(f"\n**Resumo no Dispositivo:** `{t_all}` testes executados | ✅ `{t_pass}` aprovados | ❌ `{t_fail}` falhas | ⏱️ Tempo total: `{t_time:.2f}s`\n")
+          EOF
+
+      - name: Upload de Relatórios de Testes Integrados
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: instrumented-test-reports
+          path: '**/build/reports/androidTests/connected/**'
+          if-no-files-found: ignore
+          retention-days: 7

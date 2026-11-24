@@ -18,6 +18,7 @@ class VoipSettingsUseCasesTest {
     private lateinit var setEchoCancellationUseCase: SetEchoCancellationUseCase
     private lateinit var setVibrateOnCallUseCase: SetVibrateOnCallUseCase
     private lateinit var setWifiOnlyUseCase: SetWifiOnlyUseCase
+    private lateinit var setSrtpEnabledUseCase: SetSrtpEnabledUseCase
     private lateinit var observeVoipSettingsUseCase: ObserveVoipSettingsUseCase
 
     @Before
@@ -26,6 +27,7 @@ class VoipSettingsUseCasesTest {
         setEchoCancellationUseCase = SetEchoCancellationUseCase(fakeSettingsRepository)
         setVibrateOnCallUseCase = SetVibrateOnCallUseCase(fakeSettingsRepository)
         setWifiOnlyUseCase = SetWifiOnlyUseCase(fakeSettingsRepository)
+        setSrtpEnabledUseCase = SetSrtpEnabledUseCase(fakeSettingsRepository)
         observeVoipSettingsUseCase = ObserveVoipSettingsUseCase(fakeSettingsRepository)
     }
 
@@ -54,6 +56,15 @@ class VoipSettingsUseCasesTest {
 
         setWifiOnlyUseCase(false)
         assertFalse(fakeSettingsRepository.currentSettings.useWifiOnly)
+    }
+
+    @Test
+    fun `setSrtpEnabled updates repository value`() = runTest {
+        setSrtpEnabledUseCase(true)
+        assertTrue(fakeSettingsRepository.currentSettings.srtpEnabled)
+
+        setSrtpEnabledUseCase(false)
+        assertFalse(fakeSettingsRepository.currentSettings.srtpEnabled)
     }
 
     @Test
@@ -87,6 +98,10 @@ class VoipSettingsUseCasesTest {
 
         override suspend fun setWifiOnly(enabled: Boolean) {
             currentSettings = currentSettings.copy(useWifiOnly = enabled)
+        }
+
+        override suspend fun setSrtpEnabled(enabled: Boolean) {
+            currentSettings = currentSettings.copy(srtpEnabled = enabled)
         }
     }
 }

@@ -2,7 +2,9 @@ package com.valevoip.core.telecom.vibration
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.os.Build
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -27,6 +29,9 @@ class VoipVibratorManager @Inject constructor(
         context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
     }
 
+    private val audioManager: AudioManager? =
+        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+
     @Volatile
     private var isVibrating: Boolean = false
 
@@ -34,10 +39,15 @@ class VoipVibratorManager @Inject constructor(
     private val ringVibrationPattern = longArrayOf(0L, 1000L, 1000L)
 
     /**
-     * Inicia a vibração contínua de toque para chamada recebida.
+     * Inicia a vibração contínua de toque para chamada recebida, respeitando o modo Silencioso.
      * Repete indefinidamente até que [stopVibration] seja invocado.
      */
     fun startRingingVibration() {
+        if (audioManager?.ringerMode == AudioManager.RINGER_MODE_SILENT) {
+            Timber.d("Modo silencioso ativo no sistema: vibração de chamada ignorada")
+            return
+        }
+
         val vib = vibrator ?: run {
             Timber.w("Vibrator não disponível no dispositivo")
             return
@@ -54,14 +64,21 @@ class VoipVibratorManager @Inject constructor(
         }
 
         try {
-            val audioAttributes = AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                .build()
-
             // Índice 0 indica repetição contínua a partir do início do padrão
             val effect = VibrationEffect.createWaveform(ringVibrationPattern, 0)
-            vib.vibrate(effect, audioAttributes)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val vibrationAttributes = VibrationAttributes.createForUsage(
+                    VibrationAttributes.USAGE_RINGTONE
+                )
+                vib.vibrate(effect, vibrationAttributes)
+            } else {
+                val audioAttributes = AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .build()
+                @Suppress("DEPRECATION")
+                vib.vibrate(effect, audioAttributes)
+            }
             isVibrating = true
             Timber.d("Vibração de chamada recebida iniciada")
         } catch (e: Exception) {

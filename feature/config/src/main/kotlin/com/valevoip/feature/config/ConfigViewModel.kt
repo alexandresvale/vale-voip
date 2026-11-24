@@ -2,13 +2,19 @@ package com.valevoip.feature.config
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.valevoip.core.analytics.AnalyticsEvent
+import com.valevoip.core.analytics.AnalyticsTracker
 import com.valevoip.core.domain.usecase.ClearCallHistoryUseCase
 import com.valevoip.core.domain.usecase.GenerateDiagnosticReportUseCase
 import com.valevoip.core.domain.usecase.GetAccountUseCase
 import com.valevoip.core.domain.usecase.GetCallHistoryUseCase
+import com.valevoip.core.domain.usecase.IsIgnoringBatteryOptimizationsUseCase
+import com.valevoip.core.domain.usecase.ObserveAudioCodecsUseCase
 import com.valevoip.core.domain.usecase.ObserveRegistrationStateUseCase
 import com.valevoip.core.domain.usecase.ObserveVoipSettingsUseCase
+import com.valevoip.core.domain.usecase.SetAudioCodecEnabledUseCase
 import com.valevoip.core.domain.usecase.SetEchoCancellationUseCase
+import com.valevoip.core.domain.usecase.SetSrtpEnabledUseCase
 import com.valevoip.core.domain.usecase.SetVibrateOnCallUseCase
 import com.valevoip.core.domain.usecase.SetWifiOnlyUseCase
 import com.valevoip.core.domain.usecase.UnregisterAccountUseCase
@@ -28,13 +34,18 @@ class ConfigViewModel @Inject constructor(
     private val getAccountUseCase: GetAccountUseCase,
     private val observeRegistrationStateUseCase: ObserveRegistrationStateUseCase,
     private val observeVoipSettingsUseCase: ObserveVoipSettingsUseCase,
+    private val observeAudioCodecsUseCase: ObserveAudioCodecsUseCase,
     private val setEchoCancellationUseCase: SetEchoCancellationUseCase,
     private val setVibrateOnCallUseCase: SetVibrateOnCallUseCase,
     private val setWifiOnlyUseCase: SetWifiOnlyUseCase,
+    private val setSrtpEnabledUseCase: SetSrtpEnabledUseCase,
+    private val setAudioCodecEnabledUseCase: SetAudioCodecEnabledUseCase,
+    private val isIgnoringBatteryOptimizationsUseCase: IsIgnoringBatteryOptimizationsUseCase,
     private val getCallHistoryUseCase: GetCallHistoryUseCase,
     private val clearCallHistoryUseCase: ClearCallHistoryUseCase,
     private val generateDiagnosticReportUseCase: GenerateDiagnosticReportUseCase,
-    private val unregisterAccountUseCase: UnregisterAccountUseCase
+    private val unregisterAccountUseCase: UnregisterAccountUseCase,
+    private val analyticsTracker: AnalyticsTracker
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ConfigUiState())
@@ -47,6 +58,8 @@ class ConfigViewModel @Inject constructor(
         loadAccountInfo()
         observeRegistration()
         observeSettings()
+        observeAudioCodecs()
+        refreshBatteryOptimizationStatus()
         loadHistoryCount()
     }
 
@@ -57,7 +70,9 @@ class ConfigViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         username = account.username,
-                        domain = account.domain
+                        domain = account.domain,
+                        port = account.port,
+                        transport = account.transport
                     )
                 }
             }
@@ -80,6 +95,19 @@ class ConfigViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    private fun observeAudioCodecs() {
+        observeAudioCodecsUseCase()
+            .onEach { codecs ->
+                _uiState.update { it.copy(audioCodecs = codecs) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun refreshBatteryOptimizationStatus() {
+        val isIgnoring = isIgnoringBatteryOptimizationsUseCase()
+        _uiState.update { it.copy(isIgnoringBatteryOptimizations = isIgnoring) }
+    }
+
     fun loadHistoryCount() {
         viewModelScope.launch {
             getCallHistoryUseCase().fold(
@@ -98,25 +126,68 @@ class ConfigViewModel @Inject constructor(
             is ConfigUiAction.SetEchoCancellation -> {
                 viewModelScope.launch {
                     setEchoCancellationUseCase(action.enabled)
+                    logSettingChanged("echo_cancellation", action.enabled)
                 }
             }
             is ConfigUiAction.SetVibrate -> {
                 viewModelScope.launch {
                     setVibrateOnCallUseCase(action.enabled)
+                    logSettingChanged("vibrate_on_call", action.enabled)
                 }
             }
             is ConfigUiAction.SetWifiOnly -> {
                 viewModelScope.launch {
                     setWifiOnlyUseCase(action.enabled)
+                    logSettingChanged("wifi_only", action.enabled)
                 }
             }
-            is ConfigUiAction.OpenClearHistoryDialog -> {
+            is ConfigUiAction.SetSrtpEnabled -> {
+                viewModelScope.launch {
+                    setSrtpEnabledUseCase(action.enabled)
+                    logSettingChanged("srtp_enabled", action.enabled)
+                }
+            }
+            ConfigUiAction.OpenAudioCodecsSheet -> {
+                _uiState.update { it.copy(showAudioCodecsSheet = true) }
+            }
+            ConfigUiAction.DismissAudioCodecsSheet -> {
+                _uiState.update { it.copy(showAudioCodecsSheet = false) }
+            }
+            is ConfigUiAction.ToggleAudioCodec -> {
+                viewModelScope.launch {
+                    setAudioCodecEnabledUseCase(action.codecId, action.enabled).fold(
+                        onSuccess = {
+                            logSettingChanged("codec_${action.codecId}", action.enabled)
+                        },
+                        onFailure = { error ->
+                            _uiEffect.emit(
+                                ConfigUiEffect.ShowToast(
+                                    error.message ?: "Não foi possível alterar o codec"
+                                )
+                            )
+                        }
+                    )
+                }
+            }
+            ConfigUiAction.RefreshBatteryOptimizationStatus -> {
+                refreshBatteryOptimizationStatus()
+            }
+            ConfigUiAction.RequestBatteryOptimizationSettings -> {
+                viewModelScope.launch {
+                    _uiEffect.emit(
+                        ConfigUiEffect.OpenBatteryOptimizationSettings(
+                            isAlreadyIgnoring = _uiState.value.isIgnoringBatteryOptimizations
+                        )
+                    )
+                }
+            }
+            ConfigUiAction.OpenClearHistoryDialog -> {
                 _uiState.update { it.copy(showClearHistoryDialog = true) }
             }
-            is ConfigUiAction.DismissClearHistoryDialog -> {
+            ConfigUiAction.DismissClearHistoryDialog -> {
                 _uiState.update { it.copy(showClearHistoryDialog = false) }
             }
-            is ConfigUiAction.ConfirmClearHistory -> {
+            ConfigUiAction.ConfirmClearHistory -> {
                 _uiState.update { it.copy(showClearHistoryDialog = false) }
                 viewModelScope.launch {
                     clearCallHistoryUseCase().fold(
@@ -130,19 +201,19 @@ class ConfigViewModel @Inject constructor(
                     )
                 }
             }
-            is ConfigUiAction.ShareDiagnosticReport -> {
+            ConfigUiAction.ShareDiagnosticReport -> {
                 viewModelScope.launch {
                     val report = generateDiagnosticReportUseCase()
                     _uiEffect.emit(ConfigUiEffect.ShareText(report))
                 }
             }
-            is ConfigUiAction.OpenLogoutDialog -> {
+            ConfigUiAction.OpenLogoutDialog -> {
                 _uiState.update { it.copy(showLogoutDialog = true) }
             }
-            is ConfigUiAction.DismissLogoutDialog -> {
+            ConfigUiAction.DismissLogoutDialog -> {
                 _uiState.update { it.copy(showLogoutDialog = false) }
             }
-            is ConfigUiAction.ConfirmLogout -> {
+            ConfigUiAction.ConfirmLogout -> {
                 _uiState.update { it.copy(showLogoutDialog = false) }
                 viewModelScope.launch {
                     unregisterAccountUseCase()
@@ -150,5 +221,17 @@ class ConfigViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun logSettingChanged(settingName: String, enabled: Boolean) {
+        analyticsTracker.logEvent(
+            AnalyticsEvent(
+                eventName = "voip_setting_changed",
+                parameters = mapOf(
+                    "setting" to settingName,
+                    "enabled" to enabled
+                )
+            )
+        )
     }
 }

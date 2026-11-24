@@ -11,12 +11,19 @@ class MakeCallUseCase @Inject constructor(
     private val networkConnectivityProvider: NetworkConnectivityProvider
 ) {
     operator fun invoke(number: String): Result<Unit> {
+        val sanitizedTarget = number.trim()
+        if (sanitizedTarget.isBlank()) {
+            return Result.failure(
+                IllegalArgumentException("Destino da chamada não pode ser vazio.")
+            )
+        }
+
         val settings = settingsRepository.currentSettings
         if (settings.useWifiOnly && !networkConnectivityProvider.isWifiConnected) {
             return Result.failure(
                 IllegalStateException("Chamada bloqueada: a opção 'Usar Somente Wi-Fi' está ativada e o dispositivo não está conectado a uma rede Wi-Fi.")
             )
         }
-        return sipClient.makeCall(number)
+        return sipClient.makeCall(sanitizedTarget)
     }
 }
